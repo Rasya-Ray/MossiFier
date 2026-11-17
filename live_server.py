@@ -24,6 +24,7 @@ import json
 import os
 import threading
 import time
+import urllib.request
 from collections import deque
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -55,7 +56,7 @@ HTML = """<!doctype html>
  <div class="panel">
   <div class="card"><div class="muted">Status (rata-rata <span id="win">3</span> detik terakhir)</div>
    <div class="status" id="status">menunggu...</div>
-   <div class="muted" id="upd"></div><div class="muted" id="err" style="color:#ff8a80"></div></div>
+   <div class="muted" id="upd"></div><div class="muted" id="err" style="color:#ff8a80"></div><div class="muted" id="esp"></div></div>
   <div class="card">
    <div>Area lumut: <b id="moss">-</b></div><div class="bar"><div id="b_moss" style="background:#8ab4f8;width:0"></div></div>
    <div>Healthy: <b id="h">-</b></div><div class="bar"><div id="b_h" style="background:#3cc83c;width:0"></div></div>
@@ -77,6 +78,7 @@ async function tick(){
     const st = document.getElementById('status'); st.textContent = d.status || 'menunggu...';
     st.style.color = col[d.status] || '#e8eaed';
     document.getElementById('err').textContent = d.error || '';
+    document.getElementById('esp').textContent = d.esp32 ? 'ESP32: ' + d.esp32 : '';
     if(d.updated_at){ const age = Math.round(Date.now()/1000 - d.updated_at);
       document.getElementById('upd').textContent = 'diperbarui ' + age + ' detik lalu (' + d.frames + ' frame)'; }
     document.getElementById('moss').textContent = f(d.moss_pct);
@@ -100,6 +102,8 @@ class State:
         self.frame_id = 0
         self.stop = False
         self.stats = {"status": None, "interval": interval, "error": None, "history": []}
+        self.esp32_busy = False
+        self.esp32_msg = None
 
 
 def open_source(src):
@@ -120,6 +124,35 @@ def status_from_counts(avg, n_cells, params):
     if bad >= params["frame_stressed"]:
         return "stressed"
     return "healthy"
+
+
+def esp32_sender(args, state):
+    """
+    Thread MANDIRI untuk mengirim hasil ke ESP32. Tidak terikat dengan proses scan video:
+    mengirim tiap --esp32-every detik memakai hasil terbaru, dan memberi jeda lebih lama
+    (backoff) kalau ESP32 tidak menjawab, supaya ESP32 tidak dibanjiri permintaan.
+    """
+    fails = 0
+    while not state.stop:
+        delay = min(args.esp32_every * (2 ** fails), 60.0)
+        t_end = time.time() + delay
+        while time.time() < t_end and not state.stop:
+            time.sleep(0.2)
+        st = state.stats
+        if state.stop or "updated_at" not in st or time.time() - st["updated_at"] > 3 * args.interval + 5:
+            continue
+        payload = {"healthy": st["healthy_pct"], "stressed": st["stressed_pct"],
+                   "critical": st["critical_pct"], "moss": st["moss_pct"], "status": st["status"]}
+        try:
+            req = urllib.request.Request(args.esp32, data=json.dumps(payload).encode("utf-8"),
+                                         headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=args.esp32_timeout) as r:
+                state.esp32_msg = f"terkirim (HTTP {r.status}) {datetime.now().strftime('%H:%M:%S')}"
+            fails = 0
+        except Exception as e:
+            fails += 1
+            state.esp32_msg = (f"gagal ({type(e).__name__}), coba lagi {min(args.esp32_every * (2 ** fails), 60):.0f} dtk "
+                               "lagi - jalankan esp32_check.py")
 
 
 def worker(args, params, state):
@@ -220,7 +253,7 @@ def make_handler(state):
             if path in ("/", "/index.html"):
                 self._send(200, "text/html; charset=utf-8", HTML.encode("utf-8"))
             elif path == "/stats":
-                self._send(200, "application/json", json.dumps(state.stats).encode("utf-8"))
+                self._send(200, "application/json", json.dumps({**state.stats, "esp32": state.esp32_msg}).encode("utf-8"))
             elif path == "/snapshot":
                 if state.jpeg is None:
                     self._send(503, "text/plain", b"belum ada frame")
@@ -261,6 +294,9 @@ def main():
     ap.add_argument("--smooth", type=int, default=3, help="jumlah frame untuk menghaluskan tampilan petak")
     ap.add_argument("--params", default="grid_params.json")
     ap.add_argument("--log", default=None, help="catat hasil tiap interval ke file CSV")
+    ap.add_argument("--esp32", default=None, help="URL ESP32 untuk menerima hasil, mis. http://192.168.137.107/vision")
+    ap.add_argument("--esp32-timeout", type=float, default=4.0, help="detik menunggu jawaban ESP32")
+    ap.add_argument("--esp32-every", type=float, default=10.0, help="kirim ke ESP32 tiap berapa detik")
     args = ap.parse_args()
 
     params = gc.load_params(args.params)
@@ -268,6 +304,8 @@ def main():
         print(f"CATATAN: {args.params} tidak ada, memakai ambang bawaan. Jalankan tune_grid.py untuk menyetelnya.")
     state = State(args.interval)
     threading.Thread(target=worker, args=(args, params, state), daemon=True).start()
+    if args.esp32:
+        threading.Thread(target=esp32_sender, args=(args, state), daemon=True).start()
 
     server = ThreadingHTTPServer((args.host, args.port), make_handler(state))
     print(f"Buka di browser: http://{'127.0.0.1' if args.host == '0.0.0.0' else args.host}:{args.port}")
