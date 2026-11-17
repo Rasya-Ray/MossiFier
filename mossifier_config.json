@@ -1,0 +1,11 @@
+{
+  "source": "0",
+  "interval": 5.0,
+  "fps": 8.0,
+  "smooth": 3,
+  "esp32_ip": "",
+  "esp32_path": "/vision",
+  "esp32_enabled": false,
+  "esp32_every": 10.0,
+  "esp32_timeout": 4.0
+}
