@@ -1,0 +1,31 @@
+{
+  "params": {
+    "grid": 16,
+    "hue_brown": [
+      5,
+      23
+    ],
+    "hue_yellow": [
+      23,
+      27
+    ],
+    "hue_green": [
+      27,
+      85
+    ],
+    "min_sat": 50,
+    "min_val": 50,
+    "moss_min_color": 0.5,
+    "tex_min": 8.0,
+    "t_critical": 0.6,
+    "t_stressed": 0.3,
+    "frame_critical": 0.3,
+    "frame_stressed": 0.5,
+    "min_moss_frac": 0.05
+  },
+  "mapping": "critical=Brown/Fungus, stressed=wither, healthy=sisanya",
+  "macro_f1_tune": 0.6702,
+  "macro_f1_val": 0.7403,
+  "macro_f1_test": 0.6739,
+  "false_moss_rate": 0.0944
+}
