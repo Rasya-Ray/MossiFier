@@ -6,3 +6,6 @@ __pycache__/
 
 # Specific file
 tes.py
+
+dataset/
+dataset.zip
