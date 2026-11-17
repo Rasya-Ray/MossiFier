@@ -11,3 +11,7 @@ dataset/
 dataset.zip
 nonmoss/
 preview/
+config.json
+live_log.csv
+frontend/node_modules/
+frontend/dist/
