@@ -3,10 +3,10 @@ live_server.py - Video webcam LIVE dengan grid 16x16 di halaman web.
 
 Cara pakai (venv aktif, dari folder proyek). Tidak butuh library tambahan
 (hanya opencv dan numpy yang sudah ada):
-    py live_server.py                        # webcam bawaan laptop (kamera nomor 0)
-    py live_server.py --source 1             # kamera nomor 1 (kalau ada beberapa kamera)
-    py live_server.py --source video.mp4     # uji tanpa kamera memakai file video
-    py live_server.py --interval 5 --log live_log.csv
+    py legacy/live_server.py                        # webcam bawaan laptop (kamera nomor 0)
+    py legacy/live_server.py --source 1             # kamera nomor 1 (kalau ada beberapa kamera)
+    py legacy/live_server.py --source video.mp4     # uji tanpa kamera memakai file video
+    py legacy/live_server.py --interval 5 --log live_log.csv
 Lalu buka http://127.0.0.1:8000 di browser.
 
 Alurnya:
@@ -22,15 +22,20 @@ import argparse
 import csv
 import json
 import os
+import sys
 import threading
 import time
 import urllib.request
 from collections import deque
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import cv2
 import numpy as np
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 import grid_core as gc
 
@@ -292,7 +297,7 @@ def main():
     ap.add_argument("--interval", type=float, default=3.0, help="detik per perhitungan persentase")
     ap.add_argument("--fps", type=float, default=8.0, help="frame yang diproses per detik")
     ap.add_argument("--smooth", type=int, default=3, help="jumlah frame untuk menghaluskan tampilan petak")
-    ap.add_argument("--params", default="grid_params.json")
+    ap.add_argument("--params", default=str(ROOT / "grid_params.json"))
     ap.add_argument("--log", default=None, help="catat hasil tiap interval ke file CSV")
     ap.add_argument("--esp32", default=None, help="URL ESP32 untuk menerima hasil, mis. http://192.168.137.107/vision")
     ap.add_argument("--esp32-timeout", type=float, default=4.0, help="detik menunggu jawaban ESP32")

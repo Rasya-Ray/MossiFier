@@ -3,8 +3,8 @@ app_grid.py - Halaman web Mossifier dengan tampilan grid 16 x 16.
 
 Cara pakai (venv aktif, dari folder proyek):
     pip install gradio
-    py app_grid.py            # mode foto: webcam (ambil foto) atau unggah gambar
-    py app_grid.py --live     # tambah tab webcam langsung (butuh Gradio versi baru)
+    py legacy/app_grid.py            # mode foto: webcam (ambil foto) atau unggah gambar
+    py legacy/app_grid.py --live     # tambah tab webcam langsung (butuh Gradio versi baru)
 Lalu buka alamat yang tercetak di terminal (biasanya http://127.0.0.1:7860).
 
 Tiap petak diberi warna:
@@ -15,15 +15,20 @@ dipakai ambang bawaan di grid_core.py.
 """
 
 import argparse
+import sys
+from pathlib import Path
 
 import cv2
 import gradio as gr
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 import grid_core as gc
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--live", action="store_true", help="tambah tab webcam langsung")
-parser.add_argument("--params", default="grid_params.json")
+parser.add_argument("--params", default=str(ROOT / "grid_params.json"))
 args = parser.parse_args()
 
 PARAMS = gc.load_params(args.params)

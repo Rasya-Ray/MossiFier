@@ -7,6 +7,8 @@ __pycache__/
 # Specific file
 tes.py
 
+# Data latih / uji (tidak dipakai runtime)
+data/
 dataset/
 dataset.zip
 nonmoss/

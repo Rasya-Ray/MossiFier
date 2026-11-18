@@ -10,11 +10,11 @@ Tiap baris CSV = satu gambar, kolom kelas berisi 1 (ada) atau 0 (tidak ada).
 Satu gambar bisa punya BEBERAPA kelas sekaligus (multi-label).
 
 Cara pakai (venv aktif, dari folder proyek):
-    py train_multilabel.py --dataset dataset --epochs 3      # tes cepat
-    py train_multilabel.py --dataset dataset --epochs 20     # latihan sungguhan
-    py train_multilabel.py --dataset dataset --regroup       # bagi ulang data per foto asli
+    py tools/train_multilabel.py --epochs 3      # tes cepat
+    py tools/train_multilabel.py --epochs 20     # latihan sungguhan
+    py tools/train_multilabel.py --regroup       # bagi ulang data per foto asli
 
-Hasil: moss_multilabel.pt (model) dan training_log.csv
+Hasil: models/moss_multilabel.pt (model) dan logs/training_log.csv
 """
 
 import argparse
@@ -23,9 +23,12 @@ import os
 import random
 import re
 import time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 # ----------------------------------------------------------------------
@@ -126,14 +129,17 @@ def print_metrics(rows, macro, title):
 # ----------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dataset", default="dataset")
+    ap.add_argument("--dataset", default=str(ROOT / "data" / "dataset"))
     ap.add_argument("--epochs", type=int, default=3)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--imgsz", type=int, default=224)
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--regroup", action="store_true")
-    ap.add_argument("--out", default="moss_multilabel.pt")
+    ap.add_argument("--out", default=str(ROOT / "models" / "moss_multilabel.pt"))
     args = ap.parse_args()
+
+    os.makedirs(ROOT / "models", exist_ok=True)
+    os.makedirs(ROOT / "logs", exist_ok=True)
 
     import torch
     import torch.nn as nn
@@ -260,7 +266,7 @@ def main():
             torch.save({"state_dict": model.state_dict(), "classes": classes,
                         "imgsz": args.imgsz}, args.out)
 
-    with open("training_log.csv", "w", newline="", encoding="utf-8") as f:
+    with open(ROOT / "logs" / "training_log.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["epoch", "loss_latih", "f1_val"])
         w.writerows(log)

@@ -15,9 +15,9 @@ Jadi dataset dipakai untuk MENYETEL dan MENGUJI aturan grid, begini:
      supaya petak non-lumut tidak salah dibaca sebagai lumut.
 
 Cara pakai (venv aktif, dari folder proyek):
-    py tune_grid.py --dataset dataset --fast
-    py tune_grid.py --dataset dataset --nonmoss nonmoss
-Hasil: grid_params.json (dibaca otomatis oleh app_grid.py)
+    py tools/tune_grid.py --fast
+    py tools/tune_grid.py --nonmoss data/nonmoss
+Hasil: grid_params.json di folder utama (dibaca otomatis oleh api.py/engine.py)
 """
 
 import argparse
@@ -26,12 +26,17 @@ import json
 import os
 import random
 import re
+import sys
 import time
+from pathlib import Path
 
 import cv2
 import numpy as np
 import pandas as pd
 from PIL import Image
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 import grid_core as gc
 
@@ -165,13 +170,13 @@ def report(title, y, pred):
 # ------------------------------------------------------------------ utama
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dataset", default="dataset")
+    ap.add_argument("--dataset", default=str(ROOT / "data" / "dataset"))
     ap.add_argument("--nonmoss", default=None, help="folder foto BUKAN lumut (opsional, sangat disarankan)")
     ap.add_argument("--max-false", type=float, default=0.05,
                     help="batas petak non-lumut yang boleh salah dibaca sebagai lumut (0-1)")
     ap.add_argument("--fast", action="store_true", help="ruang pencarian lebih kecil")
     ap.add_argument("--limit", type=int, default=0, help="batasi jumlah foto (untuk uji cepat)")
-    ap.add_argument("--out", default="grid_params.json")
+    ap.add_argument("--out", default=str(ROOT / "grid_params.json"))
     args = ap.parse_args()
     grid = gc.DEFAULT_PARAMS["grid"]
 

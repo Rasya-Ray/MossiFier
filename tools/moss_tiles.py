@@ -2,10 +2,10 @@
 moss_tiles.py - Analisis kondisi lumut per petak berdasarkan warna (HSV).
 
 Cara pakai (di terminal VS Code, venv aktif):
-    py moss_tiles.py foto.jpg                 # grid 4 x 4 (default)
-    py moss_tiles.py foto.jpg --grid 6 6      # grid 6 baris x 6 kolom
-    py moss_tiles.py foto.jpg --csv           # simpan juga hasil per petak ke CSV
-    py moss_tiles.py foto.jpg --calibrate     # tampilkan sebaran hue untuk menyetel ambang
+    py tools/moss_tiles.py foto.jpg                 # grid 4 x 4 (default)
+    py tools/moss_tiles.py foto.jpg --grid 6 6      # grid 6 baris x 6 kolom
+    py tools/moss_tiles.py foto.jpg --csv           # simpan juga hasil per petak ke CSV
+    py tools/moss_tiles.py foto.jpg --calibrate     # tampilkan sebaran hue untuk menyetel ambang
 
 Hasil: foto bernama <nama>_hasil.jpg berisi overlay warna per petak.
 

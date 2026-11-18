@@ -2,7 +2,7 @@
 esp32_check.py - Cek apakah laptop bisa menjangkau ESP32 dan endpoint-nya.
 
 Cara pakai:
-    py esp32_check.py http://10.20.219.29/vision
+    py tools/esp32_check.py http://10.20.219.29/vision
 
 Yang dicek berurutan:
   1. Sambungan TCP ke ESP32 (alamat IP dan port)
@@ -18,7 +18,7 @@ import urllib.request
 from urllib.parse import urlparse
 
 if len(sys.argv) < 2:
-    sys.exit("Pakai: py esp32_check.py http://IP-ESP32/vision")
+    sys.exit("Pakai: py tools/esp32_check.py http://IP-ESP32/vision")
 
 url = sys.argv[1]
 u = urlparse(url)
