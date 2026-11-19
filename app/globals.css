@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   Hanya 4 warna. Semua warna lain harus turunan (opacity) dari ini.
+   ------------------------------------------------------------------ */
+:root {
+  --moss-forest: #204a12;
+  --moss-leaf: #88bd87;
+  --moss-mist: #c0dabf;
+  --moss-paper: #ffffff;
+
+  /* Soft UI shadows */
+  --soft-shadow: 8px 8px 22px var(--moss-mist), -8px -8px 22px var(--moss-paper);
+  --soft-shadow-sm: 4px 4px 12px var(--moss-mist), -4px -4px 12px var(--moss-paper);
+  --soft-shadow-inset: inset 4px 4px 10px var(--moss-mist),
+    inset -4px -4px 10px var(--moss-paper);
+
+  /* react-toastify disesuaikan agar tidak keluar dari palet */
+  --toastify-color-light: var(--moss-paper);
+  --toastify-color-dark: var(--moss-forest);
+  --toastify-color-info: var(--moss-leaf);
+  --toastify-color-success: var(--moss-forest);
+  --toastify-color-warning: var(--moss-leaf);
+  --toastify-color-error: var(--moss-forest);
+  --toastify-text-color-light: var(--moss-forest);
+  --toastify-text-color-dark: var(--moss-paper);
+  --toastify-font-family: var(--font-geist-sans), Arial, sans-serif;
+}
+
+@theme inline {
+  --color-moss-forest: var(--moss-forest);
+  --color-moss-leaf: var(--moss-leaf);
+  --color-moss-mist: var(--moss-mist);
+  --color-moss-paper: var(--moss-paper);
+
+  --shadow-soft: var(--soft-shadow);
+  --shadow-soft-sm: var(--soft-shadow-sm);
+  --shadow-soft-inset: var(--soft-shadow-inset);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--moss-paper);
+  color: var(--moss-forest);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--moss-leaf);
+  color: var(--moss-paper);
+}
+
+/* Toast container mengikutisoft-UI */
+.Toastify__toast {
+  border: 1px solid var(--moss-mist);
+  border-radius: 1rem;
+  box-shadow: var(--soft-shadow-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.Toastify__progress-bar {
+  background: var(--moss-leaf);
+}
