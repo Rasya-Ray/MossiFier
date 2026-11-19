@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   Palet hutan (5 warna). Semua warna lain = turunan opacity dari ini
+   atau putih transparan untuk permukaan kaca (glassmorphism).
+   ------------------------------------------------------------------ */
+:root {
+  --forest-night: #06140b; /* kanopi malam: overlay, teks di atas aksen */
+  --forest-pine: #0f3320; /* hijau pinus pekat */
+  --forest-fern: #3e8e50; /* hijau pakis: aksen sedang, seri chart 2 */
+  --forest-lime: #a3e27b; /* hijau lumut cerah: CTA, aksen, seri chart 1 */
+  --forest-mist: #e8f5df; /* kabut hutan: teks utama */
+
+  /* Glassmorphism */
+  --glass-shadow: 0 8px 32px rgb(3 12 6 / 0.35),
+    inset 0 1px 0 rgb(255 255 255 / 0.22);
+  --glass-shadow-sm: 0 4px 16px rgb(3 12 6 / 0.28),
+    inset 0 1px 0 rgb(255 255 255 / 0.18);
+  --glass-shadow-inset: inset 0 2px 8px rgb(3 12 6 / 0.4);
+
+  /* react-toastify mengikuti palet hutan */
+  --toastify-color-light: var(--forest-pine);
+  --toastify-color-dark: var(--forest-night);
+  --toastify-color-info: var(--forest-fern);
+  --toastify-color-success: var(--forest-lime);
+  --toastify-color-warning: var(--forest-fern);
+  --toastify-color-error: var(--forest-pine);
+  --toastify-text-color-light: var(--forest-mist);
+  --toastify-text-color-dark: var(--forest-mist);
+  --toastify-font-family: var(--font-geist-sans), Arial, sans-serif;
+}
+
+@theme inline {
+  --color-forest-night: var(--forest-night);
+  --color-forest-pine: var(--forest-pine);
+  --color-forest-fern: var(--forest-fern);
+  --color-forest-lime: var(--forest-lime);
+  --color-forest-mist: var(--forest-mist);
+
+  --shadow-glass: var(--glass-shadow);
+  --shadow-glass-sm: var(--glass-shadow-sm);
+  --shadow-glass-inset: var(--glass-shadow-inset);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--forest-night);
+  color: var(--forest-mist);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--forest-lime);
+  color: var(--forest-night);
+}
+
+/* Scrollbar tipis bernuansa kaca */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.25) transparent;
+}
+
+/* Fallback bila browser belum mendukung backdrop-filter:
+   permukaan kaca dibuat lebih pekat agar teks tetap terbaca. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bg-white\/10,
+  .bg-white\/5 {
+    background-color: rgb(15 51 32 / 0.85);
+  }
+}
+
+/* Toast = kartu kaca */
+.Toastify__toast {
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 1rem;
+  background: rgb(15 51 32 / 0.6);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--glass-shadow-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.Toastify__close-button {
+  color: var(--forest-mist);
+}
+
+.Toastify__progress-bar {
+  background: var(--forest-lime);
+}
