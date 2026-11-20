@@ -44,7 +44,7 @@ export function DeviceDialog({ open, current, onClose }: DeviceDialogProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 280, damping: 24 }}
-            className="w-full max-w-sm rounded-3xl border border-white/20 bg-white/10 backdrop-blur-xl p-6 shadow-glass"
+            className="w-full max-w-sm rounded-3xl border border-white/20 bg-white/10 p-5 shadow-glass backdrop-blur-xl sm:p-6"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center gap-3">
@@ -69,7 +69,7 @@ export function DeviceDialog({ open, current, onClose }: DeviceDialogProps) {
                   defaultValue={current ?? ""}
                   placeholder="MOSS-ESP32-001"
                   autoFocus
-                  className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-sm text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime"
+                  className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-base text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime sm:text-sm"
                 />
               </label>
 

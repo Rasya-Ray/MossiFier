@@ -78,18 +78,18 @@ export function TrendChart({
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className={`rounded-3xl border border-white/20 bg-white/10 backdrop-blur-xl p-6 shadow-glass ${className}`}
+      className={`rounded-3xl border border-white/20 bg-white/10 p-5 shadow-glass backdrop-blur-xl sm:p-6 ${className}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-medium tracking-wide text-forest-mist/70 uppercase">
             {subtitle ?? "Tren pembacaan"}
           </p>
-          <h2 className="mt-1 text-lg font-semibold text-forest-mist">
+          <h2 className="mt-1 text-base font-semibold text-forest-mist sm:text-lg">
             {title}
           </h2>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {prepared.map((item) => (
             <span
               key={item.name}
@@ -109,7 +109,7 @@ export function TrendChart({
         <div className="mt-6 overflow-hidden rounded-2xl bg-white/10 p-2 shadow-glass-inset">
           <svg
             viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-            className="h-48 w-full"
+            className="h-40 w-full sm:h-48"
             role="img"
             aria-label={`Grafik ${title}`}
           >
@@ -172,7 +172,7 @@ export function TrendChart({
           </svg>
         </div>
       ) : (
-        <div className="mt-6 flex h-48 items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/10 text-sm text-forest-mist/70">
+        <div className="mt-6 flex h-40 items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/10 px-4 text-center text-sm text-forest-mist/70 sm:h-48">
           Belum ada data numerik yang cukup untuk grafik.
         </div>
       )}

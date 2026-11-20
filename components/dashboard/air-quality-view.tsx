@@ -28,7 +28,7 @@ export function AirQualityView() {
       initial="hidden"
       animate="show"
       variants={containerVariants}
-      className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8 sm:py-10"
+      className="mx-auto w-full max-w-5xl px-4 pt-6 pb-28 sm:px-8 sm:pt-10 sm:pb-12"
     >
       <motion.header
         variants={itemVariants}
@@ -53,7 +53,7 @@ export function AirQualityView() {
         />
       </motion.header>
 
-      <div className="mt-8 grid gap-5 sm:grid-cols-3">
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Kualitas Udara"
           value={formatSensorValue(latest?.air_quality, "air_quality")}

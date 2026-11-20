@@ -73,7 +73,7 @@ export function Home() {
           initial="hidden"
           animate="show"
           variants={containerVariants}
-          className="mx-auto w-full max-w-6xl px-5 pt-20 pb-24 text-center sm:px-8 sm:pt-32"
+          className="mx-auto w-full max-w-6xl px-4 pt-14 pb-20 text-center sm:px-8 sm:pt-24 sm:pb-24"
         >
           <motion.span
             variants={itemVariants}
@@ -85,7 +85,7 @@ export function Home() {
 
           <motion.h1
             variants={itemVariants}
-            className="mx-auto mt-6 max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-forest-mist sm:text-5xl"
+            className="mx-auto mt-6 max-w-3xl text-3xl font-semibold leading-tight tracking-tight text-forest-mist sm:text-4xl lg:text-5xl"
           >
             Pantau kondisi tanaman{" "}
             <span className="text-forest-lime">secara real-time.</span>
@@ -127,8 +127,8 @@ export function Home() {
 
       {/* Fitur */}
       <section id="fitur" className="scroll-mt-24">
-        <div className="mx-auto w-full max-w-6xl px-5 pb-20 sm:px-8">
-          <div className="mb-10 text-center">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-8 sm:pb-20">
+          <div className="mb-8 text-center sm:mb-10">
             <p className="text-xs font-medium tracking-[0.2em] text-forest-mist/70 uppercase">
               Fitur
             </p>
@@ -165,8 +165,8 @@ export function Home() {
 
       {/* Cara kerja */}
       <section id="cara-kerja" className="scroll-mt-24">
-        <div className="mx-auto w-full max-w-6xl px-5 pb-20 sm:px-8">
-          <div className="rounded-[2rem] border border-white/20 bg-linear-to-br from-white/20 via-white/10 to-white/5 p-7 shadow-glass sm:p-10">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-8 sm:pb-20">
+          <div className="rounded-[2rem] border border-white/20 bg-linear-to-br from-white/20 via-white/10 to-white/5 p-5 shadow-glass sm:p-10">
             <p className="text-xs font-medium tracking-[0.2em] text-forest-mist/70 uppercase">
               Cara kerja
             </p>
@@ -202,13 +202,13 @@ export function Home() {
 
       {/* CTA */}
       <section id="mulai" className="scroll-mt-24">
-        <div className="mx-auto w-full max-w-6xl px-5 pb-24 sm:px-8">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-8 sm:pb-24">
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="flex flex-col items-center gap-5 rounded-[2rem] border border-forest-lime/30 bg-forest-pine/40 p-10 text-center text-forest-mist shadow-glass backdrop-blur-2xl"
+            className="flex flex-col items-center gap-5 rounded-[2rem] border border-forest-lime/30 bg-forest-pine/40 p-6 text-center text-forest-mist shadow-glass backdrop-blur-2xl sm:p-10"
           >
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-forest-lime text-forest-night">
               <SproutIcon className="h-5 w-5" />

@@ -74,7 +74,7 @@ export function Register() {
       initial="hidden"
       animate="show"
       variants={itemVariants}
-      className="mx-auto flex w-full max-w-md flex-col items-center px-5 py-16"
+      className="mx-auto flex w-full max-w-md flex-col items-center px-4 py-10 sm:px-5 sm:py-16"
     >
       <motion.span
         initial={{ scale: 0.6, opacity: 0 }}
@@ -94,7 +94,7 @@ export function Register() {
 
       <motion.form
         onSubmit={handleSubmit}
-        className="mt-8 w-full rounded-3xl border border-white/20 bg-white/10 backdrop-blur-xl p-6 shadow-glass sm:p-8"
+        className="mt-8 w-full rounded-3xl border border-white/20 bg-white/10 p-5 shadow-glass backdrop-blur-xl sm:p-8"
       >
         <label className="block text-xs font-medium text-forest-mist/80">
           Nama
@@ -104,7 +104,7 @@ export function Register() {
             onChange={(event) => setName(event.target.value)}
             placeholder="Nama lengkap"
             autoComplete="name"
-            className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-sm text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime"
+            className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-base text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime sm:text-sm"
           />
         </label>
 
@@ -116,7 +116,7 @@ export function Register() {
             onChange={(event) => setEmail(event.target.value)}
             placeholder="nama@email.com"
             autoComplete="email"
-            className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-sm text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime"
+            className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-base text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime sm:text-sm"
           />
         </label>
 
@@ -128,7 +128,7 @@ export function Register() {
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Minimal 6 karakter"
             autoComplete="new-password"
-            className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-sm text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime"
+            className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-base text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime sm:text-sm"
           />
         </label>
 
@@ -140,7 +140,7 @@ export function Register() {
             onChange={(event) => setConfirm(event.target.value)}
             placeholder="Ulangi password"
             autoComplete="new-password"
-            className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-sm text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime"
+            className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-base text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime sm:text-sm"
           />
         </label>
 

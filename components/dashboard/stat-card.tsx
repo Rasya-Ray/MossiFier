@@ -15,7 +15,7 @@ export function StatCard({ label, value, hint }: StatCardProps) {
       variants={itemVariants}
       whileHover={{ y: -6, scale: 1.01 }}
       transition={{ type: "spring", stiffness: 320, damping: 22 }}
-      className="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-xl p-5 shadow-glass"
+      className="rounded-3xl border border-white/20 bg-white/10 p-4 shadow-glass backdrop-blur-xl sm:p-5"
     >
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs font-medium tracking-wide text-forest-mist/70 uppercase">
@@ -36,7 +36,7 @@ export function StatCard({ label, value, hint }: StatCardProps) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.25 }}
-          className="mt-3 min-h-10 truncate text-3xl font-semibold tracking-tight text-forest-mist"
+          className="mt-3 min-h-10 truncate text-2xl font-semibold tracking-tight text-forest-mist sm:text-3xl"
         >
           {value}
         </motion.p>

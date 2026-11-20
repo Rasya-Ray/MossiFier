@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useDevice } from "@/components/device/device-provider";
 import { LoadingFace } from "@/components/ui";
 import { ChatMarkdown } from "@/components/dashboard/chat-markdown";
-import { LeafIcon, SignalIcon } from "@/components/dashboard/icons";
+import { SignalIcon } from "@/components/dashboard/icons";
 import {
   CHAT_MAX_HISTORY,
   CHAT_MAX_MESSAGE_CHARS,
@@ -285,7 +285,7 @@ export function ChatWidget() {
                 }}
                 placeholder="Tanya soal lumut atau udara…"
                 aria-label="Pesan"
-                className="field-sizing-content max-h-28 min-h-10 flex-1 resize-none rounded-2xl border border-white/20 bg-forest-night/30 px-3.5 py-2.5 text-sm text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime"
+                className="field-sizing-content max-h-28 min-h-10 flex-1 resize-none rounded-2xl border border-white/20 bg-forest-night/30 px-3.5 py-2.5 text-base text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime sm:text-sm"
               />
               <button
                 type="submit"
@@ -312,36 +312,35 @@ export function ChatWidget() {
       </AnimatePresence>
 
       {/* Tombol melayang */}
-      {/* Tombol melayang */}
-<AnimatePresence>
-  {!open && (
-    <motion.button
-      type="button"
-      onClick={() => setOpen(true)}
-      aria-label="Buka chatbot Kibo"
-      animate={{
-        opacity: 1,
-        scale: 1,
-        y: [0, -8, 0],
-      }}
-      exit={{ opacity: 0, scale: 0.8 }}
-      transition={{
-        duration: 3,
-        repeat: Infinity,
-        ease: "easeInOut",
-      }}
-      className="pointer-events-auto fixed right-6 bottom-6 z-50 grid h-16 w-16 cursor-pointer place-items-center rounded-full shadow-glass sm:right-6 sm:bottom-6"
-    >
-      <Image
-        src="/logo-chatbot.png"
-        alt="Buka chatbot"
-        width={64}
-        height={64}
-        className="h-full w-full object-contain"
-      />
-    </motion.button>
-  )}
-</AnimatePresence>
+      <AnimatePresence>
+        {!open && (
+          <motion.button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Buka chatbot Kibo"
+            animate={{
+              opacity: 1,
+              scale: 1,
+              y: [0, -8, 0],
+            }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className="pointer-events-auto fixed right-4 bottom-4 z-50 grid h-16 w-16 cursor-pointer place-items-center rounded-full shadow-glass sm:right-6 sm:bottom-6"
+          >
+            <Image
+              src="/logo-chatbot.png"
+              alt="Buka chatbot"
+              width={64}
+              height={64}
+              className="h-full w-full object-contain"
+            />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

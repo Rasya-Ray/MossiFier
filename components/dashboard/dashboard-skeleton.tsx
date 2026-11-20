@@ -15,7 +15,7 @@ import {
  */
 export function DashboardSkeleton() {
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
+    <main className="mx-auto w-full max-w-5xl px-4 pt-6 pb-28 sm:px-8 sm:pt-10 sm:pb-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <SkeletonAvatar size={44} />
         <div className="flex items-center gap-3">

@@ -43,7 +43,7 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
       initial="hidden"
       animate="show"
       variants={containerVariants}
-      className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8 sm:py-10"
+      className="mx-auto w-full max-w-5xl px-4 pt-6 pb-28 sm:px-8 sm:pt-10 sm:pb-12"
     >
       <motion.header
         variants={itemVariants}
@@ -75,7 +75,7 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
         {/* Nilai terbaru */}
         <motion.section
           variants={itemVariants}
-          className={`flex flex-col rounded-3xl border border-white/20 bg-linear-to-br from-white/20 via-white/10 to-white/5 p-6 shadow-glass ${
+          className={`flex flex-col rounded-3xl border border-white/20 bg-linear-to-br from-white/20 via-white/10 to-white/5 p-5 shadow-glass sm:p-6 ${
             isStatus ? "lg:col-span-3" : ""
           }`}
         >
@@ -87,7 +87,7 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            className="mt-4 text-4xl font-semibold tracking-tight text-forest-mist"
+            className="mt-4 text-3xl font-semibold tracking-tight break-words text-forest-mist sm:text-4xl"
           >
             {formatSensorValue(latest, sensorKey)}
           </motion.p>
@@ -117,7 +117,7 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
       {/* Riwayat */}
       <motion.section
         variants={itemVariants}
-        className="mt-5 rounded-3xl border border-white/20 bg-white/10 backdrop-blur-xl p-6 shadow-glass"
+        className="mt-5 rounded-3xl border border-white/20 bg-white/10 p-5 shadow-glass backdrop-blur-xl sm:p-6"
       >
         <p className="text-xs font-medium tracking-wide text-forest-mist/70 uppercase">
           Entri terakhir
@@ -131,12 +131,12 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
             {readings.map((reading) => (
               <li
                 key={reading.id}
-                className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3 text-sm shadow-glass-sm"
+                className="flex items-start justify-between gap-3 rounded-2xl bg-white/10 px-4 py-3 text-sm shadow-glass-sm"
               >
-                <span className="text-forest-mist/70">
+                <span className="min-w-0 text-xs text-forest-mist/70 sm:text-sm">
                   {formatDateTime(reading.created_at)}
                 </span>
-                <strong className="text-forest-mist">
+                <strong className="shrink-0 text-right text-forest-mist">
                   {formatSensorValue(readingValue(reading, sensorKey), sensorKey)}
                 </strong>
               </li>

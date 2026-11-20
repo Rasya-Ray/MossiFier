@@ -17,7 +17,7 @@ export function NoDevice({ title = "Belum ada device" }: NoDeviceProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="mx-auto w-full max-w-xl px-5 py-16 sm:px-8"
+      className="mx-auto w-full max-w-xl px-4 py-12 sm:px-8 sm:py-16"
     >
       <section className="rounded-[2rem] border border-white/20 bg-linear-to-br from-white/20 via-white/10 to-white/5 p-8 text-center shadow-glass">
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white/10 backdrop-blur-xl text-forest-mist shadow-glass-sm">
