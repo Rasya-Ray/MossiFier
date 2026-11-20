@@ -66,7 +66,8 @@ components/
   ui/index.ts                 # barrel export: @/components/ui
   dashboard/
     sidebar.tsx               # sidebar desktop + topbar mobile (device + logout)
-    floating-message.tsx      # lingkaran hijau + ikon pesan (fixed, kanan bawah)
+    chat-widget.tsx           # tombol chat kanan bawah + popup chat AI (riwayat di state)
+    chat-markdown.tsx         # renderer markdown mini untuk balasan AI (aman, tanpa HTML mentah)
     overview.tsx              # halaman dashboard utama (data terbaru)
     field-view.tsx            # halaman generik 1 kolom (termasuk status tanaman)
     air-quality-view.tsx      # kualitas udara + CO2 in/out
@@ -86,8 +87,9 @@ app/
     login/route.ts            # verifikasi password + set cookie sesi
     logout/route.ts           # hapus cookie sesi
     me/route.ts               # user dari cookie (debug)
+  api/chat/route.ts           # chatbot: cek sesi → baca sensor → OpenRouter (stream teks)
   dashboard/
-    layout.tsx                # guard sesi + sidebar + floating message
+    layout.tsx                # guard sesi + sidebar + chat widget
     page.tsx                  # overview (data terbaru)
     air-quality/page.tsx      # kualitas udara + CO2 in/out
     kelembapan/page.tsx       # humidity
@@ -104,6 +106,10 @@ lib/
   format.ts                 # format tanggal konsisten (anti hydration mismatch)
   labels.ts                 # format teks status tanaman (apa adanya)
   device-store.ts           # device_id aktif (localStorage + useSyncExternalStore)
+  chat/
+    knowledge.ts            # system prompt: persona + pengetahuan Mossifier & udara
+    sensor-context.ts       # ambil data sensor dari Supabase → blok teks konteks AI
+    types.ts                # tipe + batas pesan chat
   auth/
     types.ts                # SessionUser
     password.ts             # hash/verify password (scrypt)
@@ -147,6 +153,14 @@ Semua loading state **wajib** memakai primitives di `components/ui/skeleton.tsx`
 (`Skeleton`, `SkeletonText`, `SkeletonCard`, `SkeletonStatCard`, `SkeletonChart`, dll.)
 lewat `import { ... } from "@/components/ui"` — jangan membuat skeleton inline baru.
 Setiap selesai fitur, jalankan `npm run build` dan pastikan tidak ada error tipe.
+
+## 8. Chatbot AI (OpenRouter)
+
+- Alur: `chat-widget.tsx` → `POST /api/chat` (`{messages, deviceId}`) → server cek sesi, ambil 20 baris sensor terakhir device itu dari Supabase (`lib/chat/sensor-context.ts`), lalu memanggil OpenRouter `/chat/completions` (format OpenAI-compatible) dengan `stream: true` dan meneruskan balasan sebagai teks polos.
+- **API key hanya di server.** Env (di `.env`, tanpa awalan `NEXT_PUBLIC_`): `OPENROUTER_API_KEY` (wajib), `OPENROUTER_MODEL` (default `google/gemini-3.5-flash-lite`), `OPENROUTER_BASE_URL` (default `https://openrouter.ai/api/v1`). Jangan pernah mengimpor/menyebut key di komponen client.
+- Persona dan pengetahuan (Mossifier, CO₂, kelembapan, cahaya, lumut) ada di `lib/chat/knowledge.ts`. Data live disisipkan sebagai pesan sistem kedua, bukan di prompt statis. Kalau menambah kolom sensor baru, update `SENSOR_KEYS`/`SENSOR_LABELS` di `lib/sensors.ts` dan deskripsi di `knowledge.ts`.
+- Keamanan: wajib sesi login, `deviceId` divalidasi regex, pesan dibatasi (12 riwayat × 1000 karakter), rate limit 15 pesan/menit/user (in-memory, per instance), teks status dari perangkat dibersihkan sebelum masuk prompt, detail error penyedia AI hanya di log server.
+- Balasan AI dirender lewat `chat-markdown.tsx` (node React, bukan `dangerouslySetInnerHTML`).
 
 <!-- BEGIN:nextjs-agent-rules -->
 

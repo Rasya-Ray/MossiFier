@@ -1,0 +1,128 @@
+MOSSIFIER — KONTEKS PROYEK (untuk AI/agent/teman setim)
+=========================================================
+Tempel file ini di awal sesi AI baru supaya langsung paham proyeknya.
+Aturan kerja rinci ada di AGENTS.md (di root repo). File ini = ringkasan.
+JANGAN menulis rahasia (API key, password DB, AUTH_SECRET) di file ini.
+
+1. APA ITU MOSSIFIER
+--------------------
+Perangkat IoT pemantau & penjaga kualitas udara berbasis lumut (moss) hidup.
+Tiga bagian proyek:
+  a) Perangkat ESP32 (esp32_upgrade.ino): baca sensor, POST ke Supabase.
+  b) Machine learning (branch machine_learning): model multilabel klasifikasi
+     kondisi lumut (Sehat/Sakit/Mati) dari gambar, diproses per tile/grid
+     (moss_tiles.py, grid_core.py, train_multilabel.py, live_server.py).
+  c) Website dashboard (branch Main-Dashboard): monitoring untuk user.
+Repo: github.com/Rasya-Ray/MossiFier
+Branch: Main-Dashboard (web), machine_learning, Dashboard, MODUL,
+        machine-learning/dashboard, machine-learning/dashboard-oc.
+
+2. STACK WEB
+-----------
+Next.js 16 (App Router, cacheComponents aktif) + React 19 + TypeScript strict
+Tailwind CSS v4 (tema via CSS variable di app/globals.css, @theme inline)
+motion (animasi, import dari "motion/react") — satu-satunya lib animasi
+react-toastify — satu-satunya lib notifikasi
+Supabase (Postgres + Realtime) + Prisma 8 (skema di src/prisma/contract.ts)
+Path alias: @/* -> root. Dilarang menambah file .js/.jsx.
+Next.js ini versi baru: baca node_modules/next/dist/docs/ sebelum coding API Next.
+
+3. TEMA UI (SUDAH FINAL)
+------------------------
+Glassmorphism bernuansa hutan. Hanya 5 warna (CSS variable):
+  forest-night #06140B | forest-pine #0F3320 | forest-fern #3E8E50
+  forest-lime  #A3E27B | forest-mist #E8F5DF
+Kartu kaca: bg-white/10 backdrop-blur-xl border border-white/20 shadow-glass
+(shadow-glass-sm, shadow-glass-inset untuk input). Teks utama text-forest-mist,
+aksen/CTA forest-lime (teks di atasnya forest-night).
+Dilarang: warna hardcode lain, bg-white solid, text-zinc-*, dll.
+Latar: public/forest.svg lewat components/layout/forest-background.tsx
+(bergeser pelan 5 px/detik). Dashboard menambah overlay bg-forest-night/60.
+Loading state wajib pakai primitives di components/ui (Skeleton*, LoadingFace).
+
+4. STRUKTUR PENTING
+-------------------
+app/
+  page.tsx, login/, register/            halaman publik
+  dashboard/ (layout + 6 halaman)        dilindungi sesi (proxy.ts + layout)
+  api/auth/{login,register,logout,me}    auth nyata (scrypt + cookie HMAC)
+  api/chat/route.ts                      chatbot AI (lihat bagian 6)
+components/
+  dashboard/  sidebar, overview, field-view, air-quality-view, stat-card,
+              trend-chart, live-status, use-realtime, chat-widget, chat-markdown
+  device/     device-provider (device aktif), device-dialog, no-device
+  home/ auth/ layout/ ui/ providers/
+lib/
+  sensors.ts (tipe, label, satuan sensor)   labels.ts (format status tanaman)
+  device-store.ts (device aktif di localStorage)   supabase.ts (client browser)
+  auth/ (password, token, session, users)
+  chat/ (knowledge.ts, sensor-context.ts, types.ts)
+proxy.ts            gate /dashboard <-> /login & /register
+src/prisma/         contract (skema) — 2 tabel: users, devices
+esp32_upgrade.ino   firmware ESP32
+
+5. ALUR DATA SENSOR
+-------------------
+ESP32 --POST--> Supabase REST /rest/v1/devices (kolom: device_id, status,
+air_quality, co2_in, co2_out, humidity, brightness, fan_speed). Satu baris =
+satu kiriman (riwayat), device_id TIDAK unik; id default gen_random_uuid().
+Dashboard: use-realtime.ts ambil 20 baris terakhir + subscribe INSERT (Realtime).
+Status tanaman = TEKS BEBAS dari perangkat (mis. "Sehat"), ditampilkan apa
+adanya (tidak ada lagi kode 1/2/3). Satuan: co2 ppm, humidity %; kualitas
+udara, kecerahan LED, kecepatan fan tidak punya satuan di kode.
+User memilih device di sidebar (disimpan localStorage); tanpa device ->
+empty state, bukan angka 0. Realtime butuh: alter publication supabase_realtime
+add table devices + policy RLS select/insert anon (sudah di contract.ts).
+
+6. CHATBOT AI
+-------------
+Tombol chat kanan bawah /dashboard -> popup chat (components/dashboard/chat-widget.tsx).
+Alur: widget -> POST /api/chat {messages, deviceId} -> server cek sesi ->
+ambil 20 baris sensor terakhir device itu dari Supabase (lib/chat/sensor-context.ts:
+nilai terbaru, min/maks/rata-rata, tren, peringatan data lama) -> panggil
+OpenRouter /chat/completions (stream) -> teruskan teks polos ke browser.
+Persona + pengetahuan (Mossifier, CO2, kelembapan, cahaya, lumut) ada di
+lib/chat/knowledge.ts — edit di sana untuk mengubah gaya jawab/menambah ilmu.
+Env (server-only, di .env, tanpa NEXT_PUBLIC_):
+  OPENROUTER_API_KEY   wajib
+  OPENROUTER_MODEL     default google/gemini-3.5-flash-lite
+  OPENROUTER_BASE_URL  default https://openrouter.ai/api/v1
+Keamanan: wajib login, deviceId divalidasi regex, riwayat maks 12 pesan x 1000
+karakter, rate limit 15 pesan/menit/user (in-memory), status dari perangkat
+dibersihkan sebelum masuk prompt, detail error penyedia hanya di log server,
+balasan dirender tanpa dangerouslySetInnerHTML.
+Pesan error di UI: 401/402 dari penyedia -> "kunci/saldo"; lainnya -> "sibuk".
+Detail sebenarnya ada di terminal: baris "[chat] OpenRouter <status> ...".
+
+7. ENV (.env, BUKAN .env.local; dibaca Next.js dan Prisma CLI)
+--------------------------------------------------------------
+DATABASE_URL (Supabase Session pooler port 5432), NEXT_PUBLIC_SUPABASE_URL,
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, NEXT_PUBLIC_SITE_URL, AUTH_SECRET,
+DEVICE_ID, APP_DATA_SOURCE, OPENROUTER_*  (contoh: .env.example).
+Format nilai: KEY=nilai (kutip opsional; wajib hanya jika ada spasi atau #).
+Restart `npm run dev` setelah mengubah .env.
+
+8. PERINTAH
+-----------
+npm run dev      development
+npm run build    build produksi + cek tipe SELURUH proyek (jalankan tiap selesai fitur)
+npm run lint     eslint
+npx prisma contract emit | db update | db verify
+
+9. CATATAN / MASALAH YANG PERNAH MUNCUL
+---------------------------------------
+- Node di Windows bisa kena "Connect Timeout" ke host eksternal (IPv6 dulu).
+  Sudah ditangani: dns.setDefaultResultOrder("ipv4first") di app/api/chat/route.ts.
+- Baris lama di tabel devices dengan status "1"/"2"/"3" tampil sebagai angka mentah.
+- Di cmd Windows, JSON di curl harus pakai kutip ganda ("), bukan kutip tunggal (').
+- Warning console "scroll-behavior: smooth": tambahkan data-scroll-behavior="smooth"
+  pada <html> di app/layout.tsx bila ingin menghilangkannya.
+- Rate limit chat in-memory: tidak dibagi antar instance serverless.
+
+10. IDE LANJUTAN (BELUM DIKERJAKAN)
+-----------------------------------
+- Simpan riwayat chat (sekarang hilang saat refresh).
+- Notifikasi bila CO2 tinggi / lumut "Sakit" / device offline.
+- Hubungkan hasil model ML (branch machine_learning) ke ESP32 -> kolom status.
+- Isi satuan sensor yang belum jelas, lalu perbarui lib/chat/knowledge.ts.
+- Rate limit terpusat (mis. tabel Supabase/Upstash) bila deploy multi-instance.
