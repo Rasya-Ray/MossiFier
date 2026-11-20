@@ -11,6 +11,7 @@ import {
   CHAT_MAX_MESSAGE_CHARS,
   type ChatMessage,
 } from "@/lib/chat/types";
+import Image from "next/image";
 
 const SUGGESTIONS = [
   "Gimana kondisi lumut sekarang?",
@@ -149,8 +150,14 @@ export function ChatWidget() {
           >
             {/* Header */}
             <header className="flex items-center gap-3 border-b border-white/15 px-4 py-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-forest-lime text-forest-night">
-                <LeafIcon className="h-4 w-4" />
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-forest-lime">
+                <Image
+                  src="/logo-chatbot.png"
+                  alt="Kibo"
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 object-contain"
+                />
               </span>
               <div className="min-w-0 flex-1">
                 <h2 className="truncate text-sm font-semibold text-forest-mist">
@@ -305,32 +312,36 @@ export function ChatWidget() {
       </AnimatePresence>
 
       {/* Tombol melayang */}
-      <motion.button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-label={open ? "Tutup chat" : "Buka chat Kibo"}
-        aria-expanded={open}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.3, type: "spring", stiffness: 260, damping: 20 }}
-        whileHover={{ scale: 1.08 }}
-        whileTap={{ scale: 0.94 }}
-        className="pointer-events-auto absolute right-4 bottom-4 h-14 w-14 rounded-full shadow-glass sm:right-6 sm:bottom-6"
-      >
-        <svg viewBox="0 0 56 56" role="presentation" className="block h-full w-full">
-          <circle cx="28" cy="28" r="26" fill="var(--forest-lime)" />
-          <g
-            fill="none"
-            stroke="var(--forest-night)"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M17 18h22a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H26l-6 5v-5h-3a3 3 0 0 1-3-3V21a3 3 0 0 1 3-3Z" />
-            <path d="M21 25h14M21 30h9" />
-          </g>
-        </svg>
-      </motion.button>
+      {/* Tombol melayang */}
+<AnimatePresence>
+  {!open && (
+    <motion.button
+      type="button"
+      onClick={() => setOpen(true)}
+      aria-label="Buka chatbot Kibo"
+      animate={{
+        opacity: 1,
+        scale: 1,
+        y: [0, -8, 0],
+      }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={{
+        duration: 3,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+      className="pointer-events-auto fixed right-6 bottom-6 z-50 grid h-16 w-16 cursor-pointer place-items-center rounded-full shadow-glass sm:right-6 sm:bottom-6"
+    >
+      <Image
+        src="/logo-chatbot.png"
+        alt="Buka chatbot"
+        width={64}
+        height={64}
+        className="h-full w-full object-contain"
+      />
+    </motion.button>
+  )}
+</AnimatePresence>
     </div>
   );
 }

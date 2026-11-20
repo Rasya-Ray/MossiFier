@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import type { SessionUser } from "@/lib/auth/types";
 import { LeafIcon } from "@/components/dashboard/icons";
 import { itemVariants } from "@/components/dashboard/motion-variants";
+import Image from "next/image";
 
 const NAV_LINKS = [
   { href: "/#fitur", label: "Fitur" },
@@ -28,8 +29,14 @@ export function Navbar({ session }: NavbarProps) {
     >
       <nav className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-forest-lime text-forest-night shadow-glass-sm">
-            <LeafIcon className="h-4 w-4" />
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-forest-lime shadow-sm">
+            <Image
+              src="/logo-website.png"
+              alt="MossiFier"
+              width={40}
+              height={40}
+              className="h-10 w-10 object-contain"
+            />
           </span>
           <span className="text-base font-semibold text-forest-mist">
             Mossifier

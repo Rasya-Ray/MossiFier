@@ -18,6 +18,7 @@ import {
   WindIcon,
 } from "@/components/dashboard/icons";
 import { itemVariants } from "@/components/dashboard/motion-variants";
+import Image from "next/image";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: HomeIcon },
@@ -95,9 +96,13 @@ export function Sidebar() {
         className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-white/20 bg-white/10 backdrop-blur-xl px-5 py-6 lg:flex"
       >
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-forest-lime text-forest-night shadow-glass-sm">
-            <LeafIcon className="h-4 w-4" />
-          </span>
+          <Image
+            src="/logo-website.png"
+            alt="Mossifier"
+            width={36}
+            height={36}
+            className="h-9 w-9 object-contain"
+          />
           <span className="text-base font-semibold text-forest-mist">
             Mossifier
           </span>
@@ -149,8 +154,14 @@ export function Sidebar() {
       <header className="sticky top-0 z-30 border-b border-white/20 bg-forest-night/55 backdrop-blur-xl px-4 py-3 backdrop-blur lg:hidden">
         <div className="flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-forest-lime text-forest-night">
-              <LeafIcon className="h-3.5 w-3.5" />
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-forest-lime shadow-sm">
+              <Image
+                src="/logo-website.png"
+                alt="MossiFier"
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain"
+              />
             </span>
             <span className="text-sm font-semibold text-forest-mist">
               Mossifier
