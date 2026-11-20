@@ -53,7 +53,7 @@ export const SENSOR_DESCRIPTIONS: Record<SensorFieldKey, string> = {
   humidity: "Kelembapan udara di sekitar tanaman.",
   brightness: "Tingkat kecerahan lampu LED.",
   fan_speed: "Kecepatan kipas sirkulasi udara.",
-  status: "Kondisi tanaman: 1 = Sehat, 2 = Sakit, 3 = Mati.",
+  status: "Kondisi tanaman terbaru yang dikirim perangkat melalui Supabase.",
 };
 
 export const SENSOR_UNITS: Partial<Record<SensorFieldKey, string>> = {
@@ -88,7 +88,7 @@ export function historyValues(
   });
 }
 
-/** Format tampilan nilai (angka + satuan, atau label status tanaman). */
+/** Format tampilan nilai (angka + satuan, atau teks status tanaman apa adanya). */
 export function formatSensorValue(
   value: number | string | null | undefined,
   key: SensorFieldKey,

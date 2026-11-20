@@ -16,7 +16,7 @@ type LoadingFaceProps = {
 
 /**
  * Loading lucu ala Gen Z: bola wajah "O_O" yang muter-muter.
- * Hormat reduced-motion (nggak muter kalau user minta kurangi animasi).
+ * Menghormati reduced-motion (tidak berputar bila pengguna meminta animasi dikurangi).
  */
 export function LoadingFace({
   label = "Memuat data...",

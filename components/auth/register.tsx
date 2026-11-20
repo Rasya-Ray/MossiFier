@@ -102,7 +102,7 @@ export function Register() {
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Nama kamu"
+            placeholder="Nama lengkap"
             autoComplete="name"
             className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-sm text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime"
           />
@@ -114,7 +114,7 @@ export function Register() {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="kamu@email.com"
+            placeholder="nama@email.com"
             autoComplete="email"
             className="mt-2 w-full rounded-2xl border border-white/20 bg-forest-night/30 px-4 py-3 text-sm text-forest-mist shadow-glass-inset outline-none placeholder:text-forest-mist/50 focus:border-forest-lime"
           />

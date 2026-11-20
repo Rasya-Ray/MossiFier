@@ -1,15 +1,9 @@
-/** Status tanaman dari kolom `status`: 1 = Sehat, 2 = Sakit, 3 = Mati. */
-export const PLANT_STATUS_MAP: Record<string, string> = {
-  "1": "Sehat",
-  "2": "Sakit",
-  "3": "Mati",
-  sehat: "Sehat",
-  sakit: "Sakit",
-  mati: "Mati",
-};
-
+/**
+ * Status tanaman dikirim perangkat sebagai teks langsung melalui Supabase
+ * (contoh: "Sehat", "Sakit", "Mati"). Tidak ada kode angka yang perlu diterjemahkan,
+ * jadi nilai dari database ditampilkan apa adanya.
+ */
 export function formatPlantStatus(value: string | null | undefined): string {
   const raw = value?.trim();
-  if (!raw) return "Belum ada data";
-  return PLANT_STATUS_MAP[raw.toLowerCase()] ?? `Kode ${raw}`;
+  return raw ? raw : "Belum ada data";
 }

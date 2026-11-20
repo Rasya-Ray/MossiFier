@@ -82,9 +82,6 @@ export function Overview() {
             >
               {plantValue}
             </motion.p>
-            <p className="mt-3 max-w-sm text-sm leading-6 text-forest-mist/70">
-              Diterjemahkan dari kolom status (1 = Sehat, 2 = Sakit, 3 = Mati).
-            </p>
           </div>
           <div className="flex flex-col items-center gap-3 rounded-3xl bg-white/10 backdrop-blur-xl p-5 shadow-glass-sm">
             <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/10 text-forest-mist">

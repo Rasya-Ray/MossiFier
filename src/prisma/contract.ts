@@ -33,7 +33,7 @@ const Device = model('Device', {
       .default(sql`gen_random_uuid()`)
       .onCreate(gen.uuid(7)),
     device_id: field.column(type.String()), // MOSS-XXXXXX dari ESP32
-    status: field.column(type.String()).optional(), // "1" = Sehat, "2" = Sakit, "3" = Mati
+    status: field.column(type.String()).optional(), // teks bebas, mis. "Sehat"
     air_quality: field.column(type.Int()).optional(),
     co2_in: field.column(type.Int()).optional(),
     co2_out: field.column(type.Int()).optional(),

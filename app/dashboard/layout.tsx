@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { SessionProvider } from "@/components/auth/session-provider";
 import { DeviceProvider } from "@/components/device/device-provider";
-import { MascotPhysics } from "@/components/dashboard/mascot-physics";
+import { FloatingMessage } from "@/components/dashboard/floating-message";
 import { Sidebar } from "@/components/dashboard/sidebar";
 
 export const metadata: Metadata = {
@@ -28,7 +28,7 @@ async function DashboardShell({ children }: { children: ReactNode }) {
         <div className="min-h-full text-forest-mist">
           <Sidebar />
           <div className="lg:pl-64">{children}</div>
-          <MascotPhysics size={96} />
+          <FloatingMessage size={56} />
         </div>
       </DeviceProvider>
     </SessionProvider>

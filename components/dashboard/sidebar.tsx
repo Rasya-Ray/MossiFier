@@ -56,7 +56,7 @@ export function Sidebar() {
     } finally {
       // Device dipilih per sesi login, jadi jangan diwariskan ke akun berikutnya.
       clearDeviceId();
-      toast.info("Kamu sudah keluar dari Mossifier.");
+      toast.info("Anda telah keluar dari Mossifier.");
       router.replace("/login");
       router.refresh();
     }

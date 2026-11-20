@@ -77,10 +77,11 @@ void kirimKeSupabase() {
   HTTPClient http;
 
   // Tidak mengirim `id`: devices.id punya default gen_random_uuid() di database.
-  // Status: "1" = Sehat, "2" = Sakit, "3" = Mati.
-  // Nilai sensor di bawah masih dummy — ganti dengan pembacaan pin nyata.
+  // Status dikirim sebagai teks langsung (bukan kode angka), misalnya "Sehat".
+  // Ganti nilai di bawah dengan hasil klasifikasi kondisi lumut yang sebenarnya.
+  String plantStatus = "Sehat";
   String jsonData = "{\"device_id\":\"" + deviceId + "\",";
-  jsonData += "\"status\":\"" + String(random(1, 4)) + "\",";
+  jsonData += "\"status\":\"" + plantStatus + "\",";
   jsonData += "\"air_quality\":" + String(random(0, 500)) + ",";
   jsonData += "\"co2_in\":" + String(random(400, 2000)) + ",";
   jsonData += "\"co2_out\":" + String(random(400, 2000)) + ",";

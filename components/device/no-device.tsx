@@ -25,8 +25,8 @@ export function NoDevice({ title = "Belum ada device" }: NoDeviceProps) {
         </span>
         <h1 className="mt-5 text-xl font-semibold text-forest-mist">{title}</h1>
         <p className="mt-2 text-sm leading-6 text-forest-mist/70">
-          Tambahkan Device ID perangkat ESP32 dulu. Tanpa device, dashboard
-          tidak menampilkan data apa pun.
+          Tambahkan Device ID perangkat ESP32 terlebih dahulu. Tanpa perangkat,
+          dashboard tidak akan menampilkan data.
         </p>
         <button
           type="button"

@@ -50,15 +50,19 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
         className="flex flex-wrap items-start justify-between gap-4"
       >
         <div>
-          <p className="text-xs font-medium tracking-wide text-forest-mist/70 uppercase">
-            {subtitle ?? "Sensor detail"}
-          </p>
+          {!isStatus && (
+            <p className="text-xs font-medium tracking-wide text-forest-mist/70 uppercase">
+              {subtitle ?? "Detail sensor"}
+            </p>
+          )}
           <h1 className="mt-1 text-2xl font-semibold text-forest-mist sm:text-3xl">
             {title}
           </h1>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-forest-mist/70">
-            {description}
-          </p>
+          {!isStatus && (
+            <p className="mt-2 max-w-xl text-sm leading-6 text-forest-mist/70">
+              {description}
+            </p>
+          )}
         </div>
         <LiveStatus
           isFetching={live.isFetching}
@@ -71,7 +75,9 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
         {/* Nilai terbaru */}
         <motion.section
           variants={itemVariants}
-          className="flex flex-col rounded-3xl border border-white/20 bg-linear-to-br from-white/20 via-white/10 to-white/5 p-6 shadow-glass"
+          className={`flex flex-col rounded-3xl border border-white/20 bg-linear-to-br from-white/20 via-white/10 to-white/5 p-6 shadow-glass ${
+            isStatus ? "lg:col-span-3" : ""
+          }`}
         >
           <p className="text-xs font-medium tracking-wide text-forest-mist/70 uppercase">
             Pembacaan terbaru
@@ -93,21 +99,7 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
           </div>
         </motion.section>
 
-        {isStatus ? (
-          <motion.section
-            variants={itemVariants}
-            className="flex flex-col justify-center rounded-3xl border border-white/20 bg-white/10 backdrop-blur-xl p-6 shadow-glass lg:col-span-2"
-          >
-            <p className="text-xs font-medium tracking-wide text-forest-mist/70 uppercase">
-              Arti kode status
-            </p>
-            <ul className="mt-4 space-y-2 text-sm text-forest-mist/80">
-              <li>1 · Sehat</li>
-              <li>2 · Sakit</li>
-              <li>3 · Mati</li>
-            </ul>
-          </motion.section>
-        ) : (
+        {!isStatus && (
           <TrendChart
             title={title}
             subtitle="Riwayat terkini"

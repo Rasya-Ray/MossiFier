@@ -39,7 +39,7 @@ Sumber data utama: tabel **`devices`** di Supabase PostgreSQL. Skema Prisma 8 ad
 - Semua environment variable disimpan di **`.env`** (bukan `.env.local`) — dibaca Next.js dan `prisma.config.ts` (`dotenv/config`).
 - Supabase harus mengaktifkan Realtime untuk tabel `devices` (`alter publication supabase_realtime add table devices`) plus policy RLS `select`/`insert` untuk anon. Policy anon **dideklarasikan di contract** (`rlsEnabled` + `policySelect` + `policyInsert` di `src/prisma/contract.ts`), jadi jangan bikin policy manual lagi — `npx prisma db update` akan menamainya ulang dengan hash.
 - `devices.id` punya default database `gen_random_uuid()`, jadi ESP32 cukup POST kolom sensor (tanpa `id`). Ini wajib; tanpa default, REST insert ditolak `400`.
-- Status tanaman: `1` = Sehat, `2` = Sakit, `3` = Mati (lihat `lib/labels.ts`; teks `sehat/sakit/mati` juga diterima).
+- Status tanaman dikirim perangkat sebagai **teks langsung** (mis. `"Sehat"`, `"Sakit"`, `"Mati"`), bukan kode angka. Nilai dari kolom `status` ditampilkan apa adanya (lihat `lib/labels.ts`).
 - Skema Prisma hanya dua tabel: `users` (akun login) dan `devices` (data sensor). Login/register **nyata**: password di-hash `scrypt` (`lib/auth/password.ts`), sesi disimpan di cookie HttpOnly bertanda tangan HMAC (`lib/auth/token.ts`), dan `proxy.ts` menolak `/dashboard` tanpa sesi valid. Device yang dipantau dipilih user di sidebar (disimpan di localStorage lewat `lib/device-store.ts`); tanpa device, dashboard menampilkan empty state (bukan 0).
 
 ## 4. Struktur
@@ -58,7 +58,7 @@ components/
   home/
     home.tsx                  # landing (hero, fitur, cara kerja, CTA)
   layout/
-    forest-background.tsx     # latar hutan fixed (public/forest.svg)
+    forest-background.tsx     # latar hutan fixed (public/forest.svg, parallax 5 px/dtk)
     navbar.tsx                # navbar publik (terima prop session)
     footer.tsx
   ui/skeleton.tsx             # skeleton generik (shimmer Motion, kaca)
@@ -66,7 +66,7 @@ components/
   ui/index.ts                 # barrel export: @/components/ui
   dashboard/
     sidebar.tsx               # sidebar desktop + topbar mobile (device + logout)
-    mascot-physics.tsx        # bola wajah draggable (drag + constraint viewport)
+    floating-message.tsx      # lingkaran hijau + ikon pesan (fixed, kanan bawah)
     overview.tsx              # halaman dashboard utama (data terbaru)
     field-view.tsx            # halaman generik 1 kolom (termasuk status tanaman)
     air-quality-view.tsx      # kualitas udara + CO2 in/out
@@ -87,13 +87,13 @@ app/
     logout/route.ts           # hapus cookie sesi
     me/route.ts               # user dari cookie (debug)
   dashboard/
-    layout.tsx                # guard sesi + sidebar + mascot
+    layout.tsx                # guard sesi + sidebar + floating message
     page.tsx                  # overview (data terbaru)
     air-quality/page.tsx      # kualitas udara + CO2 in/out
     kelembapan/page.tsx       # humidity
     kecepatan-fan/page.tsx    # fan_speed
     kecerahan/page.tsx        # brightness
-    status-tanaman/page.tsx   # status (1=Sehat, 2=Sakit, 3=Mati)
+    status-tanaman/page.tsx   # status tanaman (teks langsung dari Supabase)
   globals.css               # 5 CSS variable hutan + @theme inline + shadow glass
   layout.tsx                # metadata, font, ToastProvider
   robots.ts                 # SEO /robots.txt
@@ -102,7 +102,7 @@ lib/
   supabase.ts               # Supabase browser client (anon key)
   sensors.ts                # tipe + label + helper data sensor
   format.ts                 # format tanggal konsisten (anti hydration mismatch)
-  labels.ts                 # mapping status tanaman
+  labels.ts                 # format teks status tanaman (apa adanya)
   device-store.ts           # device_id aktif (localStorage + useSyncExternalStore)
   auth/
     types.ts                # SessionUser

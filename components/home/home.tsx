@@ -37,7 +37,7 @@ const FEATURES = [
   {
     icon: SproutIcon,
     title: "Status Tanaman",
-    text: "Sehat, sakit, atau mati — langsung ketahuan dari datanya.",
+    text: "Kondisi tanaman tersaji langsung dari data perangkat.",
   },
   {
     icon: LeafIcon,
@@ -50,7 +50,7 @@ const STEPS = [
   {
     step: "01",
     title: "Sensor bekerja",
-    text: "Perangkat IoT membaca kondisi lingkungan tanamanmu.",
+    text: "Perangkat IoT membaca kondisi lingkungan tanaman.",
   },
   {
     step: "02",
@@ -87,17 +87,17 @@ export function Home() {
             variants={itemVariants}
             className="mx-auto mt-6 max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-forest-mist sm:text-5xl"
           >
-            Pantau tanamanmu{" "}
-            <span className="text-forest-lime">kayak scroll medsos.</span>
+            Pantau kondisi tanaman{" "}
+            <span className="text-forest-lime">secara real-time.</span>
           </motion.h1>
 
           <motion.p
             variants={itemVariants}
             className="mx-auto mt-5 max-w-xl text-sm leading-7 text-forest-mist/70 sm:text-base"
           >
-            Mossifier mengubah data sensor jadi dashboard yang gampang dibaca.
-            Udara, kelembapan, cahaya, sampai kondisi tanaman — semua dalam satu
-            layar.
+            Mossifier mengubah data sensor menjadi dashboard yang mudah dibaca.
+            Kualitas udara, kelembapan, cahaya, hingga kondisi tanaman tersaji
+            dalam satu layar.
           </motion.p>
 
           <motion.div
@@ -214,11 +214,10 @@ export function Home() {
               <SproutIcon className="h-5 w-5" />
             </span>
             <h2 className="max-w-lg text-2xl font-semibold sm:text-3xl">
-              Tanamanmu nggak bisa ngomong. Tapi datanya bisa.
+              Tanaman tidak bisa berbicara, tetapi datanya bisa.
             </h2>
             <p className="max-w-md text-sm text-forest-mist/70">
-              Daftar gratis (sementara pakai dummy login), terus langsung masuk
-              ke dashboard.
+              Buat akun, lalu langsung masuk ke dashboard.
             </p>
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
               <Link
