@@ -9,6 +9,7 @@ import { SignalIcon } from "@/components/dashboard/icons";
 import {
   CHAT_MAX_HISTORY,
   CHAT_MAX_MESSAGE_CHARS,
+  type ChatHistoryResponse,
   type ChatMessage,
 } from "@/lib/chat/types";
 import Image from "next/image";
@@ -23,11 +24,17 @@ const SUGGESTIONS = [
 const GREETING =
   "Halo! Aku Kibo. Tanya apa saja soal lumut, kualitas udara, atau data sensor perangkatmu.";
 
+const TRANSIENT_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+const wait = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 /**
  * Tombol chat melayang (kanan bawah) + popup percakapan dengan AI.
- * Dipasang di app/dashboard/layout.tsx, jadi riwayat chat bertahan selama
- * pengguna berpindah antar halaman dashboard (hilang saat refresh/keluar).
- * Server (`/api/chat`) yang membaca data sensor & memanggil AI (OpenRouter).
+ * Dipasang di app/dashboard/layout.tsx.
+ *
+ * Riwayat tidak cuma disimpan di state: saat widget dibuka, ia mengambil
+ * ingatan per akun dari Redis lewat GET /api/chat/history. Server juga
+ * mencoba ulang otomatis kalau chat pertama gagal (lihat lib/chat/upstream.ts).
  */
 export function ChatWidget() {
   const { deviceId, openDialog } = useDevice();
@@ -38,13 +45,41 @@ export function ChatWidget() {
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const pendingRef = useRef(false);
 
   // Hentikan stream yang masih jalan saat widget di-unmount (mis. logout).
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Pulihkan ingatan Kibo dari server (Redis), aman kalau endpoint gagal.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/chat/history", {
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const data = (await response.json()) as Partial<ChatHistoryResponse>;
+        if (cancelled || !Array.isArray(data.messages)) return;
+        const saved = data.messages;
+        if (saved.length) {
+          setMessages((prev) => (prev.length ? prev : saved));
+        }
+      } catch {
+        // Riwayat bersifat tambahan; chat tetap bisa dipakai tanpa ini.
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
@@ -54,10 +89,102 @@ export function ChatWidget() {
     if (open) inputRef.current?.focus();
   }, [open]);
 
+  const requestReply = useCallback(
+    async (history: ChatMessage[]) => {
+      if (pendingRef.current) return;
+
+      pendingRef.current = true;
+      setPending(true);
+      setError(null);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+      let received = false;
+      let lastMessage = "Gagal menghubungi chatbot.";
+
+      try {
+        // Percobaan kedua hanya terjadi kalau belum ada satu pun potongan jawaban.
+        for (let attempt = 0; attempt < 2; attempt++) {
+          let retryable = true;
+          try {
+            const response = await fetch("/api/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                messages: history.slice(-CHAT_MAX_HISTORY),
+                deviceId,
+              }),
+              signal: controller.signal,
+            });
+
+            if (!response.ok || !response.body) {
+              const status = response.status;
+              const data = (await response.json().catch(() => ({}))) as {
+                error?: string;
+              };
+              lastMessage = data.error ?? lastMessage;
+              retryable = status === 429 || TRANSIENT_STATUSES.has(status);
+              if (attempt === 0 && retryable) {
+                await wait(status === 429 ? 2500 : 1200);
+                continue;
+              }
+              break;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let reply = "";
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const piece = decoder.decode(value, { stream: true });
+              if (!piece) continue;
+              received = true;
+              reply += piece;
+              const snapshot = reply;
+              setMessages((prev) => [
+                ...prev.slice(0, -1),
+                { role: "assistant", content: snapshot },
+              ]);
+            }
+
+            if (!reply.trim()) {
+              if (attempt === 0) {
+                await wait(800);
+                continue;
+              }
+              lastMessage = "AI tidak memberi jawaban. Coba lagi.";
+              break;
+            }
+            return; // berhasil
+          } catch (caught) {
+            if (controller.signal.aborted) return;
+            lastMessage =
+              caught instanceof Error ? caught.message : lastMessage;
+            if (received || !retryable || attempt === 1) break;
+            await wait(1200);
+          }
+        }
+
+        setMessages((prev) =>
+          prev.at(-1)?.role === "assistant" && !prev.at(-1)?.content
+            ? prev.slice(0, -1)
+            : prev,
+        );
+        setError(lastMessage);
+      } finally {
+        if (abortRef.current === controller) abortRef.current = null;
+        pendingRef.current = false;
+        setPending(false);
+      }
+    },
+    [deviceId],
+  );
+
   const send = useCallback(
-    async (rawText: string) => {
+    (rawText: string) => {
       const text = rawText.trim().slice(0, CHAT_MAX_MESSAGE_CHARS);
-      if (!text || pending) return;
+      if (!text || pendingRef.current) return;
 
       const history: ChatMessage[] = [
         ...messages,
@@ -65,72 +192,35 @@ export function ChatWidget() {
       ];
       setMessages([...history, { role: "assistant", content: "" }]);
       setInput("");
-      setError(null);
-      setPending(true);
-
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      try {
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: history.slice(-CHAT_MAX_HISTORY),
-            deviceId,
-          }),
-          signal: controller.signal,
-        });
-
-        if (!response.ok || !response.body) {
-          const data = (await response.json().catch(() => ({}))) as {
-            error?: string;
-          };
-          throw new Error(data.error ?? "Gagal menghubungi chatbot.");
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let reply = "";
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          reply += decoder.decode(value, { stream: true });
-          const snapshot = reply;
-          setMessages((prev) => [
-            ...prev.slice(0, -1),
-            { role: "assistant", content: snapshot },
-          ]);
-        }
-        if (!reply.trim()) throw new Error("AI tidak memberi jawaban. Coba lagi.");
-      } catch (caught) {
-        if (controller.signal.aborted) return;
-        setError(
-          caught instanceof Error ? caught.message : "Terjadi kesalahan.",
-        );
-        // Buang balasan kosong, simpan balasan parsial kalau ada.
-        setMessages((prev) =>
-          prev.at(-1)?.role === "assistant" && !prev.at(-1)?.content
-            ? prev.slice(0, -1)
-            : prev,
-        );
-      } finally {
-        if (abortRef.current === controller) abortRef.current = null;
-        setPending(false);
-      }
+      void requestReply(history);
     },
-    [deviceId, messages, pending],
+    [messages, requestReply],
   );
+
+  const retryLast = useCallback(() => {
+    if (pendingRef.current) return;
+    let index = messages.length - 1;
+    while (index >= 0 && messages[index].role !== "user") index -= 1;
+    if (index < 0) return;
+
+    const history = messages.slice(0, index + 1);
+    setMessages([...history, { role: "assistant", content: "" }]);
+    void requestReply(history);
+  }, [messages, requestReply]);
 
   function clearChat() {
     abortRef.current?.abort();
     setMessages([]);
     setError(null);
     setPending(false);
+    pendingRef.current = false;
+    void fetch("/api/chat/history", { method: "DELETE" }).catch(() => {
+      // Penghapusan lokal tetap berlalu walau server sedang bermasalah.
+    });
   }
 
-  const lastIsEmptyAssistant =
-    messages.at(-1)?.role === "assistant" && !messages.at(-1)?.content;
+  const lastMessage = messages.at(-1);
+  const canRetry = Boolean(error && !pending && lastMessage?.role === "user");
 
   return (
     <div className="pointer-events-none fixed inset-0 z-40">
@@ -177,6 +267,7 @@ export function ChatWidget() {
                 <button
                   type="button"
                   onClick={clearChat}
+                  title="Hapus riwayat dan ingatan Kibo untuk akun ini"
                   className="rounded-full border border-white/20 px-3 py-1 text-[11px] font-medium text-forest-mist/80 hover:bg-white/10"
                 >
                   Hapus
@@ -211,13 +302,13 @@ export function ChatWidget() {
                 {GREETING}
               </div>
 
-              {messages.length === 0 && (
+              {hydrated && messages.length === 0 && (
                 <div className="flex flex-wrap gap-2 pt-1">
                   {SUGGESTIONS.map((suggestion) => (
                     <button
                       key={suggestion}
                       type="button"
-                      onClick={() => void send(suggestion)}
+                      onClick={() => send(suggestion)}
                       className="rounded-full border border-forest-lime/40 bg-white/5 px-3 py-1.5 text-xs font-medium text-forest-mist hover:bg-white/15"
                     >
                       {suggestion}
@@ -243,7 +334,7 @@ export function ChatWidget() {
                 ) : null,
               )}
 
-              {pending && lastIsEmptyAssistant && (
+              {pending && lastMessage?.role === "assistant" && !lastMessage.content && (
                 <div className="flex items-center gap-2 text-xs text-forest-mist/70">
                   <LoadingFace size="sm" label={null} tone="light" />
                   Mengetik…
@@ -251,12 +342,18 @@ export function ChatWidget() {
               )}
 
               {error && (
-                <p
-                  role="alert"
-                  className="rounded-2xl border border-white/20 bg-forest-pine/60 px-3.5 py-2.5 text-xs leading-5 text-forest-mist"
-                >
-                  {error}
-                </p>
+                <div className="rounded-2xl border border-white/20 bg-forest-pine/60 px-3.5 py-2.5 text-xs leading-5 text-forest-mist">
+                  <p role="alert">{error}</p>
+                  {canRetry && (
+                    <button
+                      type="button"
+                      onClick={retryLast}
+                      className="mt-2 rounded-full border border-forest-lime/50 px-3 py-1 font-medium text-forest-mist hover:bg-white/10"
+                    >
+                      Coba lagi
+                    </button>
+                  )}
+                </div>
               )}
 
               <div ref={endRef} />
@@ -266,7 +363,7 @@ export function ChatWidget() {
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                void send(input);
+                send(input);
               }}
               className="flex items-end gap-2 border-t border-white/15 p-3"
             >
@@ -279,7 +376,7 @@ export function ChatWidget() {
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
-                    void send(input);
+                    send(input);
                   }
                 }}
                 placeholder="Tanya soal lumut atau udara…"

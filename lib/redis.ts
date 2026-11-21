@@ -45,7 +45,7 @@ function latestKey(deviceId: string): string {
 }
 
 /** Client singleton (aman untuk HMR di dev). */
-async function getClient(): Promise<RedisClientType | null> {
+export async function getRedisClient(): Promise<RedisClientType | null> {
   const url = process.env.REDIS_URL;
   if (!url) return null;
 
@@ -131,7 +131,7 @@ export async function getCachedLatest(
   deviceId: string,
 ): Promise<LatestReading | null> {
   try {
-    const client = await getClient();
+    const client = await getRedisClient();
     if (!client) return null;
 
     const hash = await client.hGetAll(latestKey(deviceId));
@@ -150,7 +150,7 @@ export async function getCachedLatest(
 /** Simpan pembacaan terbaru ke Redis. `false` kalau Redis tidak tersedia. */
 export async function setCachedLatest(reading: SensorReading): Promise<boolean> {
   try {
-    const client = await getClient();
+    const client = await getRedisClient();
     if (!client) return false;
 
     const key = latestKey(reading.device_id);

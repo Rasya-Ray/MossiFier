@@ -92,7 +92,8 @@ app/
     logout/route.ts           # hapus cookie sesi
     me/route.ts               # user dari cookie (debug)
     demo/route.ts             # sesi demo juri tanpa baris tabel users
-  api/chat/route.ts           # chatbot: cek sesi → baca sensor → OpenRouter (stream teks)
+  api/chat/route.ts           # chatbot: cek sesi → baca sensor → AI (stream teks + memori)
+  api/chat/history/route.ts   # GET/DELETE riwayat chat per akun dari Redis
   api/readings/latest/route.ts # latest Redis-first + cache write dari Realtime
   api/readings/ingest/route.ts # Supabase Database Webhook ke Redis
   dashboard/
@@ -117,8 +118,10 @@ lib/
   readings/
     validation.ts            # validasi row sensor dari Supabase/webhook
   chat/
-    knowledge.ts            # system prompt: persona + pengetahuan Mossifier & udara
+    knowledge.ts            # system prompt: persona + pengetahuan + gaya bicara Kibo
     sensor-context.ts       # ambil data sensor dari Supabase → blok teks konteks AI
+    upstream.ts             # retry + model cadangan + pemanasan stream OpenRouter
+    memory.ts               # ingatan chat per akun di Redis (server-only)
     types.ts                # tipe + batas pesan chat
   auth/
     types.ts                # SessionUser
@@ -173,6 +176,9 @@ Setiap selesai fitur, jalankan `npm run build` dan pastikan tidak ada error tipe
 - Persona dan pengetahuan (Mossifier, CO₂, kelembapan, cahaya, lumut) ada di `lib/chat/knowledge.ts`. Data live disisipkan sebagai pesan sistem kedua, bukan di prompt statis. Kalau menambah kolom sensor baru, update `SENSOR_KEYS`/`SENSOR_LABELS` di `lib/sensors.ts` dan deskripsi di `knowledge.ts`.
 - Keamanan: wajib sesi login, `deviceId` divalidasi regex, pesan dibatasi (12 riwayat × 1000 karakter), rate limit 15 pesan/menit/user (in-memory, per instance), teks status dari perangkat dibersihkan sebelum masuk prompt, detail error penyedia AI hanya di log server.
 - Balasan AI dirender lewat `chat-markdown.tsx` (node React, bukan `dangerouslySetInnerHTML`).
+- **Keandalan chat pertama:** `lib/chat/upstream.ts` mencoba ulang gangguan sementara (timeout token pertama, 429, 5xx, stream kosong) lalu berpindah ke model cadangan. Env opsional `OPENROUTER_FALLBACK_MODELS` (koma) menggantikan daftar default `google/gemini-3.1-flash-lite,amazon/nova-2-lite-v1`. Stream dipanaskan sampai token pertama sebelum respons dikirim; client juga retry sekali untuk status sementara.
+- **Ingatan per akun:** `lib/chat/memory.ts` menyimpan 40 pesan terakhir di Redis key `mossifier:chat:<user_id>` (TTL 30 hari, opsional kalau Redis mati). `GET /api/chat/history` dipakai widget saat mount, `DELETE /api/chat/history` dipakai tombol "Hapus". Riwayat digabung dengan pesan client tanpa duplikat (`mergeWithMemory` di route). Mode demo sengaja tidak memakai ingatan agar antar juri tidak saling melihat percakapan.
+- **Gaya bicara:** aturan anti-template (pembuka berulang, sapaan berlebihan, angka sensor di luar konteks) ada di `lib/chat/knowledge.ts`. Jangan menaruhnya di komponen client.
 
 ## 9. Logo, avatar, dan insight dashboard
 

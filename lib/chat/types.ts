@@ -16,3 +16,9 @@ export type ChatRequestBody = {
   messages: ChatMessage[];
   deviceId: string | null;
 };
+
+/** Respons GET /api/chat/history (riwayat dari Redis, per akun). */
+export type ChatHistoryResponse = {
+  messages: ChatMessage[];
+  memory: boolean;
+};
