@@ -35,7 +35,7 @@ Sumber data utama: tabel **`devices`** di Supabase PostgreSQL. Skema Prisma 8 ad
 
 - ESP32 POST JSON ke Supabase REST: `POST {NEXT_PUBLIC_SUPABASE_URL}/rest/v1/devices` dengan kolom `device_id`, `status`, `air_quality`, `co2_in`, `co2_out`, `humidity`, `brightness`, `fan_speed`. Satu baris = satu kiriman (riwayat), jadi `device_id` tidak unik.
 - Nilai utama "data terakhir" dibaca dari Upstash Redis lewat `GET /api/readings/latest?deviceId=...` (Redis-first; jika key belum ada, fallback satu baris terbaru Supabase lalu isi Redis). Redis key `mossifier:latest:<device_id>` memakai hash field sesuai kolom input: `id`, `device_id`, `status`, `air_quality`, `co2_in`, `co2_out`, `humidity`, `brightness`, `fan_speed`, `created_at`, ditambah `cached_at`; TTL 30 hari. `REDIS_URL` hanya server-side di `.env`, jangan pernah di-import ke client.
-- Client memakai `components/dashboard/use-realtime.ts`: ambil 20 baris terakhir untuk grafik, subscribe `postgres_changes` (INSERT), lalu kirim pembacaan baru ke `POST /api/readings/latest` agar Redis tetap menunjuk data terkini saat dashboard aktif. **Tidak ada polling 7,5 detik.** Timestamp `created_at` selalu ditampilkan sebagai waktu data sensor; jika lebih dari 10 menit, UI menandainya sebagai data terakhir/perangkat mungkin offline. Cache `localStorage` (`lib/readings-cache.ts`) **wajib dibaca di `useEffect` setelah mount**, jangan saat render: server tidak punya `localStorage`, jadi membacanya saat render membuat HTML berbeda dan memicu hydration error.
+- Client memakai `components/dashboard/use-realtime.ts`: ambil 20 baris terakhir untuk grafik, subscribe `postgres_changes` (INSERT), lalu kirim pembacaan baru ke `POST /api/readings/latest` agar Redis tetap menunjuk data terkini saat dashboard aktif. **Tidak ada polling 7,5 detik.** Timestamp `created_at` selalu ditampilkan sebagai waktu data sensor; jika lebih dari 10 menit, UI menandainya sebagai data terakhir/perangkat mungkin offline.
 - Supaya Redis terus diperbarui walau tidak ada dashboard terbuka, konfigurasi Supabase Database Webhook untuk event `INSERT` tabel `public.devices` ke `/api/readings/ingest`, dengan header `x-mossifier-webhook-secret`. Secret yang sama wajib disimpan hanya di env server `READINGS_WEBHOOK_SECRET`.
 - Akun tanpa device tersimpan memakai `NEXT_PUBLIC_DEFAULT_DEVICE_ID` (fallback `MOSS-B0A7322B0960`) supaya akun baru langsung melihat perangkat; pilihan device manual per akun tetap menang.
 - Kredensial client hanya `NEXT_PUBLIC_SUPABASE_URL` + anon/publishable key (`lib/supabase.ts`). `DATABASE_URL` hanya untuk Prisma CLI/server, jangan pernah di-import ke client.
@@ -92,8 +92,7 @@ app/
     logout/route.ts           # hapus cookie sesi
     me/route.ts               # user dari cookie (debug)
     demo/route.ts             # sesi demo juri tanpa baris tabel users
-  api/chat/route.ts           # chatbot: cek sesi → baca sensor → AI (stream teks + memori)
-  api/chat/history/route.ts   # GET/DELETE riwayat chat per akun dari Redis
+  api/chat/route.ts           # chatbot: cek sesi → baca sensor → OpenRouter (stream teks)
   api/readings/latest/route.ts # latest Redis-first + cache write dari Realtime
   api/readings/ingest/route.ts # Supabase Database Webhook ke Redis
   dashboard/
@@ -118,10 +117,8 @@ lib/
   readings/
     validation.ts            # validasi row sensor dari Supabase/webhook
   chat/
-    knowledge.ts            # system prompt: persona + pengetahuan + gaya bicara Kibo
+    knowledge.ts            # system prompt: persona + pengetahuan Mossifier & udara
     sensor-context.ts       # ambil data sensor dari Supabase → blok teks konteks AI
-    upstream.ts             # retry + model cadangan + pemanasan stream OpenRouter
-    memory.ts               # ingatan chat per akun di Redis (server-only)
     types.ts                # tipe + batas pesan chat
   auth/
     types.ts                # SessionUser
@@ -175,10 +172,8 @@ Setiap selesai fitur, jalankan `npm run build` dan pastikan tidak ada error tipe
 - **API key hanya di server.** Env (di `.env`, tanpa awalan `NEXT_PUBLIC_`): `OPENROUTER_API_KEY` (wajib), `OPENROUTER_MODEL` (default `google/gemini-3.5-flash-lite`), `OPENROUTER_BASE_URL` (default `https://openrouter.ai/api/v1`). Jangan pernah mengimpor/menyebut key di komponen client.
 - Persona dan pengetahuan (Mossifier, CO₂, kelembapan, cahaya, lumut) ada di `lib/chat/knowledge.ts`. Data live disisipkan sebagai pesan sistem kedua, bukan di prompt statis. Kalau menambah kolom sensor baru, update `SENSOR_KEYS`/`SENSOR_LABELS` di `lib/sensors.ts` dan deskripsi di `knowledge.ts`.
 - Keamanan: wajib sesi login, `deviceId` divalidasi regex, pesan dibatasi (12 riwayat × 1000 karakter), rate limit 15 pesan/menit/user (in-memory, per instance), teks status dari perangkat dibersihkan sebelum masuk prompt, detail error penyedia AI hanya di log server.
+- **Riwayat chat per akun** (`lib/chat/history.ts`): disimpan di localStorage dengan key `mossifier.chat.<userId>` (maks 30 pesan). `ChatWidget` di `app/dashboard/layout.tsx` wajib diberi `key={user.id}` — Next.js (`cacheComponents`) mempertahankan state halaman lama saat pindah halaman, tanpa key akun B bisa melihat chat akun A. Akun demo (`isDemoUser`) tidak pernah disimpan dan dikosongkan lewat event `CHAT_RESET_EVENT` yang dikirim `sidebar.tsx` saat logout.
 - Balasan AI dirender lewat `chat-markdown.tsx` (node React, bukan `dangerouslySetInnerHTML`).
-- **Keandalan chat pertama:** `lib/chat/upstream.ts` mencoba ulang gangguan sementara (timeout token pertama, 429, 5xx, stream kosong) lalu berpindah ke model cadangan. Env opsional `OPENROUTER_FALLBACK_MODELS` (koma) menggantikan daftar default `google/gemini-3.1-flash-lite,amazon/nova-2-lite-v1`. Stream dipanaskan sampai token pertama sebelum respons dikirim; client juga retry sekali untuk status sementara.
-- **Ingatan per akun:** `lib/chat/memory.ts` menyimpan 40 pesan terakhir di Redis key `mossifier:chat:<user_id>` (TTL 30 hari, opsional kalau Redis mati). `GET /api/chat/history` dipakai widget saat mount, `DELETE /api/chat/history` dipakai tombol "Hapus". Riwayat digabung dengan pesan client tanpa duplikat (`mergeWithMemory` di route). Mode demo sengaja tidak memakai ingatan agar antar juri tidak saling melihat percakapan.
-- **Gaya bicara:** aturan anti-template (pembuka berulang, sapaan berlebihan, angka sensor di luar konteks) ada di `lib/chat/knowledge.ts`. Jangan menaruhnya di komponen client.
 
 ## 9. Logo, avatar, dan insight dashboard
 

@@ -19,6 +19,7 @@ import {
   WindIcon,
 } from "@/components/dashboard/icons";
 import { itemVariants } from "@/components/dashboard/motion-variants";
+import { CHAT_RESET_EVENT } from "@/lib/chat/history";
 import { BrandLogo } from "@/components/layout/brand-logo";
 
 const NAV_ITEMS = [
@@ -77,6 +78,8 @@ export function Sidebar() {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       // Device terakhir dipertahankan agar login berikutnya tetap menampilkan sensor.
+      // Kosongkan chat akun demo (lihat lib/chat/history.ts).
+      window.dispatchEvent(new Event(CHAT_RESET_EVENT));
       toast.info("Anda telah keluar dari Mossifier.");
       router.replace("/login");
       router.refresh();

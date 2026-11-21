@@ -28,7 +28,8 @@ async function DashboardShell({ children }: { children: ReactNode }) {
         <div className="min-h-full text-forest-mist">
           <Sidebar />
           <div className="lg:pl-64">{children}</div>
-          <ChatWidget />
+          {/* key = user id: akun berbeda tidak pernah berbagi state chat */}
+          <ChatWidget key={user.id} />
         </div>
       </DeviceProvider>
     </SessionProvider>
