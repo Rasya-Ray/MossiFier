@@ -52,10 +52,12 @@ const TONE_STYLE: Record<InsightTone, { card: string; chip: string }> = {
 export function Overview() {
   const session = useSession();
   const userName = session?.name ?? session?.email.split("@")[0] ?? "";
-  const { deviceId } = useDevice();
+  const { deviceId, ready } = useDevice();
   const live = useRealtimeSensors();
   const now = useNow();
 
+  // `ready` false saat SSR & hydration — samakan dengan halaman sensor lain.
+  if (!ready) return <DashboardSkeleton />;
   if (!deviceId) return <NoDevice />;
   if (live.isFetching && !live.latest) return <DashboardSkeleton />;
 

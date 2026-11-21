@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   readCachedReadings,
@@ -109,17 +109,15 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
   const [statusByDevice, setStatusByDevice] = useState<
     Record<string, DeviceStatus>
   >({});
+  const [cachedAtByDevice, setCachedAtByDevice] = useState<
+    Record<string, number>
+  >({});
 
   const mounted = useRef(true);
   const inFlight = useRef(false);
   const requestSeq = useRef(0);
   const rowsRef = useRef<Record<string, SensorReading[]>>({});
   const latestRef = useRef<Record<string, SensorReading>>({});
-
-  const cached = useMemo(
-    () => (deviceId ? readCachedReadings(deviceId) : null),
-    [deviceId],
-  );
 
   const commit = useCallback((id: string, next: SensorReading[]) => {
     rowsRef.current[id] = next;
@@ -197,6 +195,30 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
     patchStatus(deviceId, { ready: false });
     load();
   }, [deviceId, load, patchStatus]);
+
+  /*
+   * localStorage tidak tersedia di server. Kalau cache dibaca langsung saat
+   * render, server menghasilkan skeleton sementara client langsung menampilkan
+   * data → HTML tidak cocok dan React melempar hydration error. Cache dibaca
+   * di sini (setelah mount), jadi render pertama server & client identik.
+   */
+  useEffect(() => {
+    if (!deviceId) return;
+    const cached = readCachedReadings(deviceId);
+    const newest = cached?.readings.at(-1);
+    if (!cached || !newest) return;
+
+    commit(
+      deviceId,
+      mergeReadings(
+        rowsRef.current[deviceId] ?? [],
+        cached.readings,
+        limit,
+      ),
+    );
+    updateLatest(deviceId, newest);
+    setCachedAtByDevice((prev) => ({ ...prev, [deviceId]: cached.savedAt }));
+  }, [commit, deviceId, limit, updateLatest]);
 
   useEffect(() => {
     mounted.current = true;
@@ -278,9 +300,7 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
     };
   }, [commit, deviceId, limit, load, patchStatus, updateLatest]);
 
-  const readings = deviceId
-    ? (rowsByDevice[deviceId] ?? cached?.readings ?? [])
-    : [];
+  const readings = deviceId ? (rowsByDevice[deviceId] ?? []) : [];
   const latest = deviceId
     ? (latestByDevice[deviceId] ?? readings.at(-1) ?? null)
     : null;
@@ -290,7 +310,8 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
     readings,
     latest,
     isFetching: deviceId ? !status.ready : false,
-    lastUpdated: status.lastUpdated ?? cached?.savedAt ?? null,
+    lastUpdated:
+      status.lastUpdated ?? (deviceId ? cachedAtByDevice[deviceId] : null) ?? null,
     error: status.error,
     refresh,
   };
