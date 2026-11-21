@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "react-toastify";
+import { useSession } from "@/components/auth/session-provider";
 import { saveDeviceId } from "@/lib/device-store";
 import { SignalIcon } from "@/components/dashboard/icons";
 
@@ -13,6 +14,8 @@ type DeviceDialogProps = {
 
 /** Modal "Tambah / Ganti device" — device ID yang dipakai ESP32. */
 export function DeviceDialog({ open, current, onClose }: DeviceDialogProps) {
+  const session = useSession();
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const raw = new FormData(event.currentTarget).get("device_id");
@@ -23,7 +26,7 @@ export function DeviceDialog({ open, current, onClose }: DeviceDialogProps) {
       return;
     }
 
-    saveDeviceId(deviceId);
+    saveDeviceId(deviceId, session?.id ?? null);
     toast.success(`Device ${deviceId} dipakai.`);
     onClose();
   }

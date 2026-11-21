@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
@@ -21,6 +20,7 @@ import {
   WindIcon,
 } from "@/components/dashboard/icons";
 import { itemVariants } from "@/components/dashboard/motion-variants";
+import { BrandLogo } from "@/components/layout/brand-logo";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: HomeIcon },
@@ -165,14 +165,8 @@ export function Sidebar() {
         className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-white/20 bg-white/10 backdrop-blur-xl px-5 py-6 lg:flex"
       >
         <Link href="/" className="flex items-center gap-2.5">
-          <Image
-            src="/logo-website.png"
-            alt="Mossifier"
-            width={36}
-            height={36}
-            className="h-9 w-9 object-contain"
-          />
-          <span className="text-base font-semibold text-forest-mist">
+          <BrandLogo size={56} priority />
+          <span className="text-lg font-semibold tracking-tight text-forest-mist">
             Mossifier
           </span>
         </Link>
@@ -189,15 +183,7 @@ export function Sidebar() {
       <header className="sticky top-0 z-30 border-b border-white/20 bg-forest-night/55 backdrop-blur-xl lg:hidden">
         <div className="flex items-center justify-between gap-2 px-4 py-3">
           <Link href="/" className="flex min-w-0 items-center gap-2">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-forest-lime shadow-sm">
-              <Image
-                src="/logo-website.png"
-                alt="MossiFier"
-                width={36}
-                height={36}
-                className="h-9 w-9 object-contain"
-              />
-            </span>
+            <BrandLogo size={44} />
             <span className="truncate text-sm font-semibold text-forest-mist">
               Mossifier
             </span>
@@ -257,14 +243,8 @@ export function Sidebar() {
                   onClick={() => setMenuOpen(false)}
                   className="flex min-w-0 items-center gap-2.5"
                 >
-                  <Image
-                    src="/logo-website.png"
-                    alt="Mossifier"
-                    width={36}
-                    height={36}
-                    className="h-9 w-9 shrink-0 object-contain"
-                  />
-                  <span className="truncate text-base font-semibold text-forest-mist">
+                  <BrandLogo size={44} />
+                  <span className="truncate text-lg font-semibold tracking-tight text-forest-mist">
                     Mossifier
                   </span>
                 </Link>

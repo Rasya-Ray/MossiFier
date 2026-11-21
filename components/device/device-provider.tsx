@@ -6,28 +6,58 @@ import {
   useContext,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { useDeviceId } from "@/lib/device-store";
+import { useSession } from "@/components/auth/session-provider";
+import { DEMO_DEVICE_ID, isDemoUser } from "@/lib/demo";
 import { DeviceDialog } from "@/components/device/device-dialog";
 
 type DeviceContextValue = {
   deviceId: string | null;
+  /** False selama hydration: hindari kedipan "belum ada device" di HP. */
+  ready: boolean;
   openDialog: () => void;
 };
 
 const DeviceContext = createContext<DeviceContextValue | null>(null);
 
+function subscribeNoop(): () => void {
+  return () => {};
+}
+
+function getClientHydrated(): boolean {
+  return true;
+}
+
+function getServerHydrated(): boolean {
+  return false;
+}
+
 export function DeviceProvider({ children }: { children: ReactNode }) {
-  const deviceId = useDeviceId();
+  const session = useSession();
+  const storedDeviceId = useDeviceId(session?.id ?? null);
   const [open, setOpen] = useState(false);
+
+  // `false` saat SSR, `true` setelah hydration — tanpa setState di effect.
+  const hydrated = useSyncExternalStore(
+    subscribeNoop,
+    getClientHydrated,
+    getServerHydrated,
+  );
+
+  // Mode demo langsung memakai device pameran tanpa perlu isi Device ID.
+  // Device yang dipilih manual tetap menang kalau sudah tersimpan.
+  const deviceId =
+    storedDeviceId ?? (isDemoUser(session) ? DEMO_DEVICE_ID : null);
 
   const openDialog = useCallback(() => setOpen(true), []);
   const closeDialog = useCallback(() => setOpen(false), []);
 
   const value = useMemo(
-    () => ({ deviceId, openDialog }),
-    [deviceId, openDialog],
+    () => ({ deviceId, ready: hydrated, openDialog }),
+    [deviceId, hydrated, openDialog],
   );
 
   return (

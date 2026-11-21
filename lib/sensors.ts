@@ -47,13 +47,16 @@ export const SENSOR_LABELS: Record<SensorFieldKey, string> = {
 };
 
 export const SENSOR_DESCRIPTIONS: Record<SensorFieldKey, string> = {
-  air_quality: "Tingkat kualitas udara yang dibaca sensor.",
-  co2_in: "Kadar CO₂ di dalam ruangan.",
-  co2_out: "Kadar CO₂ di luar ruangan.",
-  humidity: "Kelembapan udara di sekitar tanaman.",
-  brightness: "Tingkat kecerahan lampu LED.",
-  fan_speed: "Kecepatan kipas sirkulasi udara.",
-  status: "Kondisi tanaman terbaru yang dikirim perangkat melalui Supabase.",
+  air_quality: "Pembacaan sensor kualitas udara di sekitar perangkat.",
+  co2_in:
+    "Kadar CO₂ di dalam ruangan. Di bawah 1.000 ppm masih nyaman; makin tinggi, makin pengap.",
+  co2_out:
+    "Kadar CO₂ di luar ruangan sebagai pembanding. Udara luar yang normal sekitar 420 ppm.",
+  humidity:
+    "Kelembapan udara di sekitar lumut. Lumut paling nyaman di kisaran 70–90%.",
+  brightness: "Tingkat kecerahan lampu LED yang menyinari lumut.",
+  fan_speed: "Kecepatan kipas yang mengalirkan udara melewati lumut.",
+  status: "Kondisi lumut terbaru yang dilaporkan perangkat.",
 };
 
 export const SENSOR_UNITS: Partial<Record<SensorFieldKey, string>> = {

@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import type { SessionUser } from "@/lib/auth/types";
 import { CloseIcon, MenuIcon } from "@/components/dashboard/icons";
 import { itemVariants } from "@/components/dashboard/motion-variants";
+import { BrandLogo } from "@/components/layout/brand-logo";
 
 const NAV_LINKS = [
   { href: "/#fitur", label: "Fitur" },
@@ -77,16 +77,8 @@ export function Navbar({ session }: NavbarProps) {
       >
       <nav className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-8 sm:py-4">
         <Link href="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-forest-lime shadow-sm sm:h-11 sm:w-11">
-            <Image
-              src="/logo-website.png"
-              alt="MossiFier"
-              width={40}
-              height={40}
-              className="h-9 w-9 object-contain sm:h-10 sm:w-10"
-            />
-          </span>
-          <span className="truncate text-base font-semibold text-forest-mist">
+          <BrandLogo size={52} priority />
+          <span className="truncate text-lg font-semibold tracking-tight text-forest-mist">
             Mossifier
           </span>
         </Link>
@@ -148,14 +140,8 @@ export function Navbar({ session }: NavbarProps) {
                   onClick={() => setMenuOpen(false)}
                   className="flex min-w-0 items-center gap-2.5"
                 >
-                  <Image
-                    src="/logo-website.png"
-                    alt="Mossifier"
-                    width={36}
-                    height={36}
-                    className="h-9 w-9 shrink-0 object-contain"
-                  />
-                  <span className="truncate text-base font-semibold text-forest-mist">
+                  <BrandLogo size={44} />
+                  <span className="truncate text-lg font-semibold tracking-tight text-forest-mist">
                     Mossifier
                   </span>
                 </Link>

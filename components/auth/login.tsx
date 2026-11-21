@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { motion } from "motion/react";
 import { toast } from "react-toastify";
-import { LeafIcon } from "@/components/dashboard/icons";
 import { itemVariants } from "@/components/dashboard/motion-variants";
+import { BrandLogo } from "@/components/layout/brand-logo";
 
 type AuthResponse = {
   user?: { id: string; email: string; name: string | null };
@@ -49,7 +49,7 @@ export function Login() {
       router.replace("/dashboard");
       router.refresh();
     } catch {
-      toast.error("Tidak bisa menghubungi server.");
+      toast.error("Server tidak bisa dihubungi. Coba lagi sebentar ya.");
     } finally {
       setSubmitting(false);
     }
@@ -66,16 +66,16 @@ export function Login() {
         initial={{ scale: 0.6, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.5, ease: "backOut" }}
-        className="grid h-14 w-14 place-items-center rounded-3xl bg-forest-lime text-forest-night shadow-glass"
+        className="grid place-items-center"
       >
-        <LeafIcon className="h-6 w-6" />
+        <BrandLogo size={104} priority />
       </motion.span>
 
       <h1 className="mt-6 text-2xl font-semibold text-forest-mist">
-        Masuk ke Mossifier
+        Selamat datang kembali
       </h1>
       <p className="mt-2 text-center text-sm text-forest-mist/70">
-        Gunakan akun yang sudah terdaftar untuk membuka dashboard.
+        Masuk untuk melihat kondisi lumut dan udara di perangkatmu.
       </p>
 
       <motion.form

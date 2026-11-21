@@ -15,9 +15,10 @@ import { NoDevice } from "@/components/device/no-device";
 
 /** Air Quality = kualitas udara + CO₂ dalam/luar ruangan. */
 export function AirQualityView() {
-  const { deviceId } = useDevice();
+  const { deviceId, ready } = useDevice();
   const live = useRealtimeSensors();
 
+  if (!ready) return <DashboardSkeleton />;
   if (!deviceId) return <NoDevice />;
   if (live.isFetching && !live.latest) return <DashboardSkeleton />;
 

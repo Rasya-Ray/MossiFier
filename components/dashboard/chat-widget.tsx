@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useDevice } from "@/components/device/device-provider";
 import { LoadingFace } from "@/components/ui";
 import { ChatMarkdown } from "@/components/dashboard/chat-markdown";
@@ -31,6 +31,7 @@ const GREETING =
  */
 export function ChatWidget() {
   const { deviceId, openDialog } = useDevice();
+  const reduceMotion = useReducedMotion();
 
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -150,15 +151,13 @@ export function ChatWidget() {
           >
             {/* Header */}
             <header className="flex items-center gap-3 border-b border-white/15 px-4 py-3">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-forest-lime">
-                <Image
-                  src="/logo-chatbot.png"
-                  alt="Kibo"
-                  width={40}
-                  height={40}
-                  className="h-10 w-10 object-contain"
-                />
-              </span>
+              <Image
+                src="/logo-chatbot.png"
+                alt="Kibo"
+                width={48}
+                height={48}
+                className="h-12 w-12 shrink-0 object-contain drop-shadow-lg"
+              />
               <div className="min-w-0 flex-1">
                 <h2 className="truncate text-sm font-semibold text-forest-mist">
                   Kibo
@@ -311,34 +310,46 @@ export function ChatWidget() {
         )}
       </AnimatePresence>
 
-      {/* Tombol melayang */}
+      {/*
+        Tombol melayang.
+        PENTING: animasi masuk/keluar (finite, spring) ada di pembungkus, sedangkan
+        animasi melayang (repeat tak terbatas) ada di tombol di dalamnya. Jangan
+        digabung: `transition` dengan repeat: Infinity ikut dipakai animasi `exit`
+        sehingga fade-out berulang terus dan tombol terlihat berkedip.
+      */}
       <AnimatePresence>
         {!open && (
-          <motion.button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label="Buka chatbot Kibo"
-            animate={{
-              opacity: 1,
-              scale: 1,
-              y: [0, -8, 0],
-            }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            className="pointer-events-auto fixed right-4 bottom-4 z-50 grid h-16 w-16 cursor-pointer place-items-center rounded-full shadow-glass sm:right-6 sm:bottom-6"
+          <motion.div
+            key="chat-fab"
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.6 }}
+            transition={{ type: "spring", stiffness: 320, damping: 24 }}
+            className="pointer-events-auto fixed right-4 bottom-4 z-50 sm:right-6 sm:bottom-6"
           >
-            <Image
-              src="/logo-chatbot.png"
-              alt="Buka chatbot"
-              width={64}
-              height={64}
-              className="h-full w-full object-contain"
-            />
-          </motion.button>
+            <motion.button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label="Buka chatbot Kibo"
+              animate={reduceMotion ? undefined : { y: [0, -6, 0] }}
+              transition={
+                reduceMotion
+                  ? undefined
+                  : { duration: 3, repeat: Infinity, ease: "easeInOut" }
+              }
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.94 }}
+              className="block h-[4.5rem] w-[4.5rem] cursor-pointer rounded-full drop-shadow-xl sm:h-20 sm:w-20"
+            >
+              <Image
+                src="/logo-chatbot.png"
+                alt=""
+                width={80}
+                height={80}
+                className="h-full w-full object-contain"
+              />
+            </motion.button>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

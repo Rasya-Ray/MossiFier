@@ -162,6 +162,12 @@ Setiap selesai fitur, jalankan `npm run build` dan pastikan tidak ada error tipe
 - Keamanan: wajib sesi login, `deviceId` divalidasi regex, pesan dibatasi (12 riwayat × 1000 karakter), rate limit 15 pesan/menit/user (in-memory, per instance), teks status dari perangkat dibersihkan sebelum masuk prompt, detail error penyedia AI hanya di log server.
 - Balasan AI dirender lewat `chat-markdown.tsx` (node React, bukan `dangerouslySetInnerHTML`).
 
+## 9. Logo, avatar, dan insight dashboard
+
+- Logo website = `public/logo-website.png` (dipakai lewat `components/layout/brand-logo.tsx`, atur ukuran lewat prop `size`). Favicon = `app/icon.png`. Avatar chatbot = `public/logo-chatbot.png`. Ganti isi berkas dengan nama yang sama untuk mengganti gambar; potong rapat ke isi logo (tanpa kanvas kosong) dan jaga ukuran < 200 KB.
+- Tombol chat melayang: animasi masuk/keluar (finite) ada di pembungkus, animasi melayang (`repeat: Infinity`) di tombol dalam. Jangan digabung — `transition` repeat tak terbatas ikut dipakai `exit` dan membuat tombol berkedip.
+- Kalimat penjelasan di dashboard (sapaan, hint kartu, "Kondisi sekarang", tips harian) ada di `lib/insights.ts` (fungsi murni, tanpa `Date.now`). Waktu diambil dari `components/dashboard/use-now.ts` yang `null` di server agar aman dari hydration mismatch. Ambang batas harus sama dengan `lib/chat/knowledge.ts`.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

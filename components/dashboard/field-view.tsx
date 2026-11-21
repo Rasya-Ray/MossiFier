@@ -25,9 +25,10 @@ type FieldViewProps = {
 };
 
 export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
-  const { deviceId } = useDevice();
+  const { deviceId, ready } = useDevice();
   const live = useRealtimeSensors();
 
+  if (!ready) return <DashboardSkeleton />;
   if (!deviceId) return <NoDevice />;
   if (live.isFetching && !live.latest) return <DashboardSkeleton />;
 

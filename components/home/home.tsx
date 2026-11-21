@@ -17,50 +17,50 @@ const FEATURES = [
   {
     icon: SignalIcon,
     title: "Air Quality In & Out",
-    text: "Kualitas udara dalam dan luar ruangan dalam satu tampilan.",
+    text: "Bandingkan kualitas udara dan CO₂ di dalam dan luar ruangan, sekaligus.",
   },
   {
     icon: DropletIcon,
     title: "Kelembapan",
-    text: "Cek kelembapan udara di sekitar tanaman kapan saja.",
+    text: "Pastikan lumutmu tidak kekeringan — kelembapan terpantau setiap saat.",
   },
   {
     icon: WindIcon,
     title: "Kecepatan Fan",
-    text: "Pantau sirkulasi udara yang menjaga tanaman tetap segar.",
+    text: "Lihat seberapa kencang kipas mengalirkan udara melewati lumut.",
   },
   {
     icon: SunIcon,
     title: "Kecerahan LED",
-    text: "Tingkat cahaya untuk fotosintesis, terpantau real-time.",
+    text: "Pantau cahaya lampu tumbuh yang dipakai lumut untuk berfotosintesis.",
   },
   {
     icon: SproutIcon,
     title: "Status Tanaman",
-    text: "Kondisi tanaman tersaji langsung dari data perangkat.",
+    text: "Sehat, sakit, atau mati — langsung terlihat dari hasil pantauan perangkat.",
   },
   {
     icon: LeafIcon,
     title: "Data realtime",
-    text: "Semua pembacaan langsung masuk dari perangkat ke Supabase.",
+    text: "Data baru dari perangkat muncul di layar seketika, tanpa perlu refresh.",
   },
 ];
 
 const STEPS = [
   {
     step: "01",
-    title: "Sensor bekerja",
-    text: "Perangkat IoT membaca kondisi lingkungan tanaman.",
+    title: "Sensor membaca",
+    text: "ESP32 di Mossifier mengukur udara, kelembapan, dan cahaya di sekitar lumut.",
   },
   {
     step: "02",
-    title: "Masuk ke Supabase",
-    text: "Data dikirim ke database dan langsung disiarkan ke dashboard.",
+    title: "Data dikirim ke cloud",
+    text: "Hasil pengukuran tersimpan di database dan langsung diteruskan ke dashboard.",
   },
   {
     step: "03",
-    title: "Dashboard menampilkan",
-    text: "Buka dashboard, lihat grafik dan status terbaru dalam hitungan detik.",
+    title: "Kamu tinggal melihat",
+    text: "Buka dashboard untuk melihat grafik, status lumut, dan saran dari Kibo.",
   },
 ];
 
@@ -80,24 +80,24 @@ export function Home() {
             className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-xl px-4 py-2 text-xs font-medium text-forest-mist/80 shadow-glass-sm"
           >
             <span className="h-2 w-2 rounded-full bg-forest-lime" />
-            IoT · Real-time · Supabase
+            Penjaga udara berbasis lumut
           </motion.span>
 
           <motion.h1
             variants={itemVariants}
             className="mx-auto mt-6 max-w-3xl text-3xl font-semibold leading-tight tracking-tight text-forest-mist sm:text-4xl lg:text-5xl"
           >
-            Pantau kondisi tanaman{" "}
-            <span className="text-forest-lime">secara real-time.</span>
+            Lumut sehat, udara segar,{" "}
+            <span className="text-forest-lime">semuanya terpantau.</span>
           </motion.h1>
 
           <motion.p
             variants={itemVariants}
             className="mx-auto mt-5 max-w-xl text-sm leading-7 text-forest-mist/70 sm:text-base"
           >
-            Mossifier mengubah data sensor menjadi dashboard yang mudah dibaca.
-            Kualitas udara, kelembapan, cahaya, hingga kondisi tanaman tersaji
-            dalam satu layar.
+            Mossifier membaca sensor di sekitar lumutmu — kualitas udara, CO₂,
+            kelembapan, dan cahaya — lalu menampilkannya dalam dashboard yang
+            mudah dipahami. Ada Kibo juga untuk membantu menjelaskan angkanya.
           </motion.p>
 
           <motion.div
@@ -133,7 +133,7 @@ export function Home() {
               Fitur
             </p>
             <h2 className="mt-2 text-2xl font-semibold text-forest-mist sm:text-3xl">
-              Enam sensor, satu dashboard
+              Satu dashboard untuk semua kabar lumutmu
             </h2>
           </div>
 
@@ -217,7 +217,7 @@ export function Home() {
               Tanaman tidak bisa berbicara, tetapi datanya bisa.
             </h2>
             <p className="max-w-md text-sm text-forest-mist/70">
-              Buat akun, lalu langsung masuk ke dashboard.
+              Buat akun, masukkan ID perangkatmu, lalu mulai pantau lumutmu.
             </p>
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
               <Link

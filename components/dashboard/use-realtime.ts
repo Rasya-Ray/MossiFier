@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  readCachedReadings,
+  writeCachedReadings,
+} from "@/lib/readings-cache";
 import { SENSOR_COLUMNS, type SensorReading } from "@/lib/sensors";
 import { useDevice } from "@/components/device/device-provider";
 
@@ -16,6 +20,18 @@ export type SensorLiveState = {
   lastUpdated: number | null;
   error: string | null;
   refresh: () => void;
+};
+
+type DeviceStatus = {
+  ready: boolean;
+  error: string | null;
+  lastUpdated: number | null;
+};
+
+const EMPTY_STATUS: DeviceStatus = {
+  ready: false,
+  error: null,
+  lastUpdated: null,
 };
 
 /** Nama channel harus unik per instance hook di satu client. */
@@ -37,53 +53,120 @@ async function loadReadings(
   return ((data ?? []) as SensorReading[]).slice().reverse();
 }
 
+function readingTime(reading: SensorReading): number {
+  const time = Date.parse(reading.created_at);
+  return Number.isFinite(time) ? time : 0;
+}
+
+/** Gabung + dedupe berdasarkan `id`, urut lama → baru, simpan `limit` terakhir. */
+function mergeReadings(
+  current: SensorReading[],
+  incoming: SensorReading[],
+  limit: number,
+): SensorReading[] {
+  const byId = new Map<string, SensorReading>();
+
+  for (const row of current) byId.set(row.id, row);
+  for (const row of incoming) byId.set(row.id, row);
+
+  return [...byId.values()]
+    .sort((a, b) => readingTime(a) - readingTime(b))
+    .slice(-limit);
+}
+
 /**
  * Data sensor device aktif langsung dari Supabase:
- * 1. Ambil riwayat terakhir sekali saat device dipilih.
- * 2. Subscribe Supabase Realtime (postgres_changes INSERT) hanya untuk device itu.
+ * 1. Tampilkan cache pembacaan terakhir (kalau ada) supaya reload tidak kosong.
+ * 2. Ambil riwayat terakhir sekali saat device dipilih.
+ * 3. Subscribe Supabase Realtime (postgres_changes INSERT) hanya untuk device itu.
  * Tanpa device → tidak ada query, data kosong (bukan 0).
+ *
+ * State disimpan per `device_id` supaya pindah device tidak saling timpa.
  */
 export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
   const { deviceId } = useDevice();
 
-  const [readings, setReadings] = useState<SensorReading[]>([]);
-  const [ready, setReady] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [rowsByDevice, setRowsByDevice] = useState<
+    Record<string, SensorReading[]>
+  >({});
+  const [statusByDevice, setStatusByDevice] = useState<
+    Record<string, DeviceStatus>
+  >({});
 
   const mounted = useRef(true);
   const inFlight = useRef(false);
+  const requestSeq = useRef(0);
+  const rowsRef = useRef<Record<string, SensorReading[]>>({});
+
+  // Cache dibaca saat render (bukan lewat effect) agar tidak ada setState
+  // sinkron di dalam effect.
+  const cached = useMemo(
+    () => (deviceId ? readCachedReadings(deviceId) : null),
+    [deviceId],
+  );
+
+  const commit = useCallback((id: string, next: SensorReading[]) => {
+    rowsRef.current[id] = next;
+    setRowsByDevice((prev) => ({ ...prev, [id]: next }));
+  }, []);
+
+  const patchStatus = useCallback(
+    (id: string, patch: Partial<DeviceStatus>) => {
+      setStatusByDevice((prev) => ({
+        ...prev,
+        [id]: { ...(prev[id] ?? EMPTY_STATUS), ...patch },
+      }));
+    },
+    [],
+  );
 
   const load = useCallback(() => {
-    if (!deviceId || inFlight.current) return;
+    if (!deviceId) return;
+
+    const requested = deviceId;
+    const requestId = ++requestSeq.current;
     inFlight.current = true;
 
-    void loadReadings(deviceId, limit)
+    void loadReadings(requested, limit)
       .then((rows) => {
-        if (!mounted.current) return;
-        setReadings(rows);
-        setLastUpdated(Date.now());
-        setError(null);
+        if (!mounted.current || requestId !== requestSeq.current) return;
+
+        // Gabungkan dengan baris realtime / cache yang sudah ada.
+        const current =
+          rowsRef.current[requested] ??
+          readCachedReadings(requested)?.readings ??
+          [];
+        const merged = mergeReadings(current, rows, limit);
+
+        commit(requested, merged);
+        writeCachedReadings(requested, merged);
+        patchStatus(requested, {
+          ready: true,
+          error: null,
+          lastUpdated: Date.now(),
+        });
       })
       .catch(() => {
-        if (mounted.current) {
-          setError("Koneksi Supabase terputus. Data terakhir tetap dipakai.");
-        }
+        if (!mounted.current || requestId !== requestSeq.current) return;
+        patchStatus(requested, {
+          ready: true,
+          error: "Koneksi Supabase terputus. Menampilkan data terakhir tersimpan.",
+        });
       })
       .finally(() => {
-        inFlight.current = false;
-        if (mounted.current) setReady(true);
+        if (requestId === requestSeq.current) inFlight.current = false;
       });
-  }, [deviceId, limit]);
+  }, [commit, deviceId, limit, patchStatus]);
 
   const refresh = useCallback(() => {
     if (!deviceId || inFlight.current) return;
-    setReady(false);
+    patchStatus(deviceId, { ready: false });
     load();
-  }, [deviceId, load]);
+  }, [deviceId, load, patchStatus]);
 
   useEffect(() => {
     mounted.current = true;
+
     if (!deviceId) return;
 
     load();
@@ -103,17 +186,27 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
           const row = payload.new as SensorReading;
           if (!row?.id || row.device_id !== deviceId) return;
 
-          setReadings((prev) => {
-            if (prev.some((item) => item.id === row.id)) return prev;
-            return [...prev, row].slice(-limit);
+          const current =
+            rowsRef.current[deviceId] ??
+            readCachedReadings(deviceId)?.readings ??
+            [];
+          if (current.some((item) => item.id === row.id)) return;
+
+          const next = mergeReadings(current, [row], limit);
+          commit(deviceId, next);
+          writeCachedReadings(deviceId, next);
+          patchStatus(deviceId, {
+            ready: true,
+            error: null,
+            lastUpdated: Date.now(),
           });
-          setLastUpdated(Date.now());
-          setError(null);
         },
       )
       .subscribe((status) => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          setError("Realtime Supabase terputus, mencoba menyambung ulang…");
+          patchStatus(deviceId, {
+            error: "Realtime Supabase terputus, mencoba menyambung ulang…",
+          });
         }
       });
 
@@ -121,18 +214,20 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
       mounted.current = false;
       void supabase.removeChannel(channel);
     };
-  }, [deviceId, load, limit]);
+  }, [commit, deviceId, limit, load, patchStatus]);
 
-  const visible = deviceId
-    ? readings.filter((reading) => reading.device_id === deviceId)
+  const readings = deviceId
+    ? (rowsByDevice[deviceId] ?? cached?.readings ?? [])
     : [];
 
+  const status = (deviceId ? statusByDevice[deviceId] : undefined) ?? EMPTY_STATUS;
+
   return {
-    readings: visible,
-    latest: visible.at(-1) ?? null,
-    isFetching: deviceId ? !ready : false,
-    lastUpdated,
-    error,
+    readings,
+    latest: readings.at(-1) ?? null,
+    isFetching: deviceId ? !status.ready : false,
+    lastUpdated: status.lastUpdated ?? cached?.savedAt ?? null,
+    error: status.error,
     refresh,
   };
 }

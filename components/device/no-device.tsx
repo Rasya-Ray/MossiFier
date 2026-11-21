@@ -9,7 +9,7 @@ type NoDeviceProps = {
 };
 
 /** Empty state saat user belum memilih device — bukan menampilkan angka 0. */
-export function NoDevice({ title = "Belum ada device" }: NoDeviceProps) {
+export function NoDevice({ title = "Belum ada perangkat terpilih" }: NoDeviceProps) {
   const { openDialog } = useDevice();
 
   return (
@@ -25,8 +25,8 @@ export function NoDevice({ title = "Belum ada device" }: NoDeviceProps) {
         </span>
         <h1 className="mt-5 text-xl font-semibold text-forest-mist">{title}</h1>
         <p className="mt-2 text-sm leading-6 text-forest-mist/70">
-          Tambahkan Device ID perangkat ESP32 terlebih dahulu. Tanpa perangkat,
-          dashboard tidak akan menampilkan data.
+          Masukkan Device ID dari Mossifier-mu (formatnya seperti
+          MOSS-ESP32-001) supaya data sensor bisa tampil di sini.
         </p>
         <button
           type="button"
