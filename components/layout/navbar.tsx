@@ -7,6 +7,7 @@ import type { SessionUser } from "@/lib/auth/types";
 import { CloseIcon, MenuIcon } from "@/components/dashboard/icons";
 import { itemVariants } from "@/components/dashboard/motion-variants";
 import { BrandLogo } from "@/components/layout/brand-logo";
+import { DemoButton } from "@/components/auth/demo-button";
 
 const NAV_LINKS = [
   { href: "/#fitur", label: "Fitur" },
@@ -37,15 +38,22 @@ export function Navbar({ session }: NavbarProps) {
     };
   }, [menuOpen]);
 
+  const demoAction = (
+    <DemoButton compact onSuccess={() => setMenuOpen(false)} />
+  );
+
   const authActions = hasSession ? (
-    <motion.a
-      href="/dashboard"
-      whileHover={{ scale: 1.04 }}
-      whileTap={{ scale: 0.96 }}
-      className="rounded-full bg-forest-lime px-4 py-2 text-xs font-medium text-forest-night shadow-glass-sm"
-    >
-      Buka Dashboard
-    </motion.a>
+    <>
+      <motion.a
+        href="/dashboard"
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.96 }}
+        className="rounded-full bg-forest-lime px-4 py-2 text-xs font-medium text-forest-night shadow-glass-sm"
+      >
+        Buka Dashboard
+      </motion.a>
+      {demoAction}
+    </>
   ) : (
     <>
       <motion.a
@@ -56,6 +64,7 @@ export function Navbar({ session }: NavbarProps) {
       >
         Masuk
       </motion.a>
+      {demoAction}
       <motion.a
         href="/register"
         whileHover={{ scale: 1.04 }}

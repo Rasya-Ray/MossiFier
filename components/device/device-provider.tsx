@@ -11,7 +11,11 @@ import {
 } from "react";
 import { useDeviceId } from "@/lib/device-store";
 import { useSession } from "@/components/auth/session-provider";
-import { DEMO_DEVICE_ID, isDemoUser } from "@/lib/demo";
+import {
+  DEFAULT_DEVICE_ID,
+  DEMO_DEVICE_ID,
+  isDemoUser,
+} from "@/lib/demo";
 import { DeviceDialog } from "@/components/device/device-dialog";
 
 type DeviceContextValue = {
@@ -47,10 +51,11 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
     getServerHydrated,
   );
 
-  // Mode demo langsung memakai device pameran tanpa perlu isi Device ID.
-  // Device yang dipilih manual tetap menang kalau sudah tersimpan.
-  const deviceId =
-    storedDeviceId ?? (isDemoUser(session) ? DEMO_DEVICE_ID : null);
+  // Demo selalu memakai perangkat pameran. Akun lain langsung memakai device
+  // default kalau belum memilih; pilihan manual per akun tetap menang.
+  const deviceId = isDemoUser(session)
+    ? DEMO_DEVICE_ID
+    : (storedDeviceId ?? DEFAULT_DEVICE_ID);
 
   const openDialog = useCallback(() => setOpen(true), []);
   const closeDialog = useCallback(() => setOpen(false), []);

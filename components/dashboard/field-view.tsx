@@ -68,6 +68,7 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
         <LiveStatus
           isFetching={live.isFetching}
           lastUpdated={live.lastUpdated}
+          readingAt={live.latest?.created_at}
           error={live.error}
         />
       </motion.header>

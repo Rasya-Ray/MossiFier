@@ -99,13 +99,14 @@ export function Overview() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="hidden items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-xl px-4 py-2 text-xs text-forest-mist/70 shadow-glass-sm sm:flex">
-            <ClockIcon className="h-3.5 w-3.5 text-forest-lime" />
-            Data sensor: {formatDateTime(latest?.created_at)}
+          <span className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-[11px] text-forest-mist/70 shadow-glass-sm backdrop-blur-xl sm:px-4 sm:text-xs">
+            <ClockIcon className="h-3.5 w-3.5 shrink-0 text-forest-lime" />
+            Data terakhir: {formatDateTime(latest?.created_at)}
           </span>
           <LiveStatus
             isFetching={live.isFetching}
             lastUpdated={live.lastUpdated}
+            readingAt={latest?.created_at}
             error={live.error}
           />
         </div>

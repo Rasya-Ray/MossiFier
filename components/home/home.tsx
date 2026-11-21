@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { containerVariants, itemVariants } from "@/components/dashboard/motion-variants";
+import { DemoButton } from "@/components/auth/demo-button";
 import {
   ArrowRightIcon,
   DropletIcon,
@@ -121,6 +122,12 @@ export function Home() {
                 Masuk
               </Link>
             </motion.div>
+          </motion.div>
+          <motion.div
+            variants={itemVariants}
+            className="mx-auto mt-3 w-full max-w-xs"
+          >
+            <DemoButton />
           </motion.div>
         </motion.div>
       </section>

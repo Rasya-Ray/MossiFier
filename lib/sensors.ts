@@ -107,3 +107,14 @@ export function formatSensorValue(
     ? `${numberFormatter.format(numeric)} ${unit}`
     : numberFormatter.format(numeric);
 }
+
+/** Sumber pembacaan terakhir pada endpoint cache. */
+export type LatestReadingSource = "redis" | "supabase" | "none";
+
+/** Respons `GET /api/readings/latest`. */
+export type LatestReadingResponse = {
+  reading: SensorReading | null;
+  source: LatestReadingSource;
+  /** Epoch ms kapan data ini terakhir ditulis ke cache (null kalau tidak ada). */
+  cachedAt: number | null;
+};

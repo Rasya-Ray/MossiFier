@@ -16,6 +16,10 @@ export const DEMO_NAME = "Mode Demo (Juri)";
 /** MAC address ESP32 unit pameran: MOSS-B0A7322B0960. */
 export const DEMO_DEVICE_ID = "MOSS-B0A7322B0960";
 
+/** Device yang langsung ditampilkan untuk akun tanpa pilihan device tersimpan. */
+export const DEFAULT_DEVICE_ID =
+  process.env.NEXT_PUBLIC_DEFAULT_DEVICE_ID?.trim() || DEMO_DEVICE_ID;
+
 /** True kalau sesi ini adalah sesi demo (bukan akun asli di tabel users). */
 export function isDemoUser(
   user: { id: string } | null | undefined,

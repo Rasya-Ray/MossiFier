@@ -34,7 +34,10 @@ Latar hutan: `components/layout/forest-background.tsx` (dipasang sekali di `app/
 Sumber data utama: tabel **`devices`** di Supabase PostgreSQL. Skema Prisma 8 ada di `src/prisma/contract.ts` (bukan `prisma/schema.prisma`).
 
 - ESP32 POST JSON ke Supabase REST: `POST {NEXT_PUBLIC_SUPABASE_URL}/rest/v1/devices` dengan kolom `device_id`, `status`, `air_quality`, `co2_in`, `co2_out`, `humidity`, `brightness`, `fan_speed`. Satu baris = satu kiriman (riwayat), jadi `device_id` tidak unik.
-- Client memakai `components/dashboard/use-realtime.ts`: ambil 20 baris terakhir sekali saat mount, lalu subscribe `postgres_changes` (INSERT) ke tabel `devices`. **Tidak ada polling 7,5 detik.**
+- Nilai utama "data terakhir" dibaca dari Upstash Redis lewat `GET /api/readings/latest?deviceId=...` (Redis-first; jika key belum ada, fallback satu baris terbaru Supabase lalu isi Redis). Redis key `mossifier:latest:<device_id>` memakai hash field sesuai kolom input: `id`, `device_id`, `status`, `air_quality`, `co2_in`, `co2_out`, `humidity`, `brightness`, `fan_speed`, `created_at`, ditambah `cached_at`; TTL 30 hari. `REDIS_URL` hanya server-side di `.env`, jangan pernah di-import ke client.
+- Client memakai `components/dashboard/use-realtime.ts`: ambil 20 baris terakhir untuk grafik, subscribe `postgres_changes` (INSERT), lalu kirim pembacaan baru ke `POST /api/readings/latest` agar Redis tetap menunjuk data terkini saat dashboard aktif. **Tidak ada polling 7,5 detik.** Timestamp `created_at` selalu ditampilkan sebagai waktu data sensor; jika lebih dari 10 menit, UI menandainya sebagai data terakhir/perangkat mungkin offline.
+- Supaya Redis terus diperbarui walau tidak ada dashboard terbuka, konfigurasi Supabase Database Webhook untuk event `INSERT` tabel `public.devices` ke `/api/readings/ingest`, dengan header `x-mossifier-webhook-secret`. Secret yang sama wajib disimpan hanya di env server `READINGS_WEBHOOK_SECRET`.
+- Akun tanpa device tersimpan memakai `NEXT_PUBLIC_DEFAULT_DEVICE_ID` (fallback `MOSS-B0A7322B0960`) supaya akun baru langsung melihat perangkat; pilihan device manual per akun tetap menang.
 - Kredensial client hanya `NEXT_PUBLIC_SUPABASE_URL` + anon/publishable key (`lib/supabase.ts`). `DATABASE_URL` hanya untuk Prisma CLI/server, jangan pernah di-import ke client.
 - Semua environment variable disimpan di **`.env`** (bukan `.env.local`) — dibaca Next.js dan `prisma.config.ts` (`dotenv/config`).
 - Supabase harus mengaktifkan Realtime untuk tabel `devices` (`alter publication supabase_realtime add table devices`) plus policy RLS `select`/`insert` untuk anon. Policy anon **dideklarasikan di contract** (`rlsEnabled` + `policySelect` + `policyInsert` di `src/prisma/contract.ts`), jadi jangan bikin policy manual lagi — `npx prisma db update` akan menamainya ulang dengan hash.
@@ -50,6 +53,7 @@ components/
   auth/
     login.tsx                 # form login (POST /api/auth/login)
     register.tsx              # form register (POST /api/auth/register)
+    demo-button.tsx           # tombol mode demo untuk juri (POST /api/auth/demo)
     session-provider.tsx      # teruskan user dari layout server ke client
   device/
     device-provider.tsx       # context device aktif + dialog
@@ -87,7 +91,10 @@ app/
     login/route.ts            # verifikasi password + set cookie sesi
     logout/route.ts           # hapus cookie sesi
     me/route.ts               # user dari cookie (debug)
+    demo/route.ts             # sesi demo juri tanpa baris tabel users
   api/chat/route.ts           # chatbot: cek sesi → baca sensor → OpenRouter (stream teks)
+  api/readings/latest/route.ts # latest Redis-first + cache write dari Realtime
+  api/readings/ingest/route.ts # Supabase Database Webhook ke Redis
   dashboard/
     layout.tsx                # guard sesi + sidebar + chat widget
     page.tsx                  # overview (data terbaru)
@@ -106,6 +113,9 @@ lib/
   format.ts                 # format tanggal konsisten (anti hydration mismatch)
   labels.ts                 # format teks status tanaman (apa adanya)
   device-store.ts           # device_id aktif (localStorage + useSyncExternalStore)
+  redis.ts                  # Upstash Redis latest-reading cache (server-only)
+  readings/
+    validation.ts            # validasi row sensor dari Supabase/webhook
   chat/
     knowledge.ts            # system prompt: persona + pengetahuan Mossifier & udara
     sensor-context.ts       # ambil data sensor dari Supabase → blok teks konteks AI
@@ -153,6 +163,8 @@ Semua loading state **wajib** memakai primitives di `components/ui/skeleton.tsx`
 (`Skeleton`, `SkeletonText`, `SkeletonCard`, `SkeletonStatCard`, `SkeletonChart`, dll.)
 lewat `import { ... } from "@/components/ui"` — jangan membuat skeleton inline baru.
 Setiap selesai fitur, jalankan `npm run build` dan pastikan tidak ada error tipe.
+
+**Tombol Demo (untuk juri) wajib selalu tersedia** di navbar publik (desktop + menu mobile, baik sudah login maupun belum), hero beranda, serta halaman login/register. Satu klik memanggil `POST /api/auth/demo` lalu langsung membuka dashboard dengan device default; jangan menghapus, menyembunyikan, atau menaruhnya di balik form.
 
 ## 8. Chatbot AI (OpenRouter)
 

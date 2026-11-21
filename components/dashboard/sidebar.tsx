@@ -7,7 +7,6 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast } from "react-toastify";
 import { useSession } from "@/components/auth/session-provider";
 import { useDevice } from "@/components/device/device-provider";
-import { clearDeviceId } from "@/lib/device-store";
 import {
   CloseIcon,
   DropletIcon,
@@ -77,8 +76,7 @@ export function Sidebar() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
-      // Device dipilih per sesi login, jadi jangan diwariskan ke akun berikutnya.
-      clearDeviceId();
+      // Device terakhir dipertahankan agar login berikutnya tetap menampilkan sensor.
       toast.info("Anda telah keluar dari Mossifier.");
       router.replace("/login");
       router.refresh();

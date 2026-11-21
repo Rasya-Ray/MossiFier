@@ -50,6 +50,7 @@ export function AirQualityView() {
         <LiveStatus
           isFetching={live.isFetching}
           lastUpdated={live.lastUpdated}
+          readingAt={latest?.created_at}
           error={live.error}
         />
       </motion.header>

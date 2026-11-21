@@ -7,6 +7,7 @@ import { motion } from "motion/react";
 import { toast } from "react-toastify";
 import { itemVariants } from "@/components/dashboard/motion-variants";
 import { BrandLogo } from "@/components/layout/brand-logo";
+import { DemoButton } from "@/components/auth/demo-button";
 
 type AuthResponse = {
   user?: { id: string; email: string; name: string | null };
@@ -154,6 +155,15 @@ export function Register() {
           {submitting ? "Membuat akun…" : "Daftar"}
         </motion.button>
       </motion.form>
+
+      <div className="mt-6 w-full">
+        <div className="mb-4 flex items-center gap-3 text-xs text-forest-mist/50">
+          <span className="h-px flex-1 bg-white/20" />
+          <span>Atau coba demo untuk juri</span>
+          <span className="h-px flex-1 bg-white/20" />
+        </div>
+        <DemoButton />
+      </div>
 
       <p className="mt-6 text-sm text-forest-mist/70">
         Sudah punya akun?{" "}
