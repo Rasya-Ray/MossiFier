@@ -5,7 +5,8 @@
  * supaya dashboard dan Kibo tidak saling bertentangan.
  */
 
-import type { SensorKey, SensorReading } from "@/lib/sensors";
+import type { PublicSensorReading, SensorKey } from "@/lib/sensors";
+import { plantStatusText } from "@/lib/labels";
 
 export type InsightTone = "good" | "info" | "warn" | "bad";
 
@@ -50,61 +51,85 @@ export function greetingFor(hour: number): string {
 
 type Level = { tone: InsightTone; label: string };
 
-function co2InLevel(ppm: number): Level {
-  if (ppm < 800) return { tone: "good", label: "Sangat baik" };
-  if (ppm < 1000) return { tone: "good", label: "Masih wajar" };
-  if (ppm < 1500) return { tone: "warn", label: "Mulai pengap" };
-  if (ppm < 2000) return { tone: "bad", label: "Pengap" };
-  return { tone: "bad", label: "Sangat pengap" };
-}
-
-function humidityLevel(pct: number): Level {
+function soilLevel(pct: number): Level {
   if (pct < 50) return { tone: "bad", label: "Terlalu kering untuk lumut" };
   if (pct < 70) return { tone: "warn", label: "Agak kering (ideal 70–90%)" };
   if (pct <= 90) return { tone: "good", label: "Ideal untuk lumut" };
-  return { tone: "warn", label: "Sangat lembap" };
+  return { tone: "warn", label: "Terlalu basah" };
+}
+
+function pm25Level(value: number): Level {
+  if (value <= 12) return { tone: "good", label: "Udara bersih" };
+  if (value <= 35) return { tone: "warn", label: "Masih wajar" };
+  if (value <= 55) return { tone: "bad", label: "Tinggi" };
+  return { tone: "bad", label: "Sangat tinggi" };
+}
+
+function fanLevel(pct: number): Level {
+  if (pct < 10) return { tone: "warn", label: "Hampir mati" };
+  if (pct <= 70) return { tone: "good", label: "Aliran udara pas" };
+  return { tone: "warn", label: "Terlalu kencang" };
+}
+
+function ledLevel(pct: number): Level {
+  if (pct < 10) return { tone: "warn", label: "Sangat redup" };
+  if (pct <= 80) return { tone: "good", label: "Cahaya cukup" };
+  return { tone: "warn", label: "Terlalu terang/panas" };
 }
 
 /** Keterangan pendek di bawah angka pada kartu sensor. */
 export function sensorHint(
   key: SensorKey,
-  value: number | null | undefined,
+  value: number | boolean | null | undefined,
 ): string {
+  if (key === "plant_status") {
+    const text = plantStatusText(typeof value === "boolean" ? Number(value) : value);
+    return text === "Belum ada data" ? "Menunggu klasifikasi AI" : text;
+  }
+  if (key === "pump") {
+    if (typeof value !== "boolean") return "Menunggu data";
+    return value ? "Pompa menyala" : "Pompa mati";
+  }
   if (typeof value !== "number" || !Number.isFinite(value)) return "Menunggu data";
+
   switch (key) {
-    case "co2_in":
-      return co2InLevel(value).label;
-    case "co2_out":
-      if (value <= 500) return "Normal untuk udara luar";
-      if (value <= 700) return "Sedikit di atas normal";
-      return "Tinggi untuk udara luar";
-    case "humidity":
-      return humidityLevel(value).label;
-    case "air_quality":
-      return "Dibaca dari sensor udara";
-    case "brightness":
-      return "Cahaya untuk lumut";
-    case "fan_speed":
-      return "Aliran udara ke lumut";
+    case "soil_moisture":
+      return soilLevel(value).label;
+    case "pm25":
+      return pm25Level(value).label;
+    case "pm1":
+      return value <= 15 ? "Partikel ultra halus rendah" : "Partikel ultra halus tinggi";
+    case "pm10":
+      return value <= 45 ? "Debu kasar rendah" : "Debu kasar tinggi";
+    case "mq135_1":
+    case "mq135_2":
+      return "Dibaca dari sensor gas";
+    case "soil_raw":
+      return "Nilai mentah sensor tanah";
+    case "vision_conf":
+      return `Keyakinan AI ${Math.round(value * 100)}%`;
+    case "fan":
+      return fanLevel(value).label;
+    case "led":
+      return ledLevel(value).label;
   }
 }
 
 /** Satu kalimat penjelasan di bawah status tanaman. */
-export function plantNote(status: string | null | undefined): string {
-  const text = (status ?? "").trim().toLowerCase();
-  if (!text) {
+export function plantNote(status: number | null | undefined): string {
+  if (status === null || status === undefined) {
     return "Belum ada status dari perangkat. Pastikan Mossifier menyala dan terhubung ke Wi-Fi.";
   }
-  if (text.includes("mati")) {
+  if (status === 2) {
     return "Lumut terdeteksi mati. Cari tahu penyebabnya dulu (terlalu kering, panas, atau terlalu basah) sebelum menanam yang baru.";
   }
-  if (text.includes("sakit")) {
+  if (status === 1) {
     return "Lumutmu terdeteksi kurang sehat. Cek kelembapan dan cahaya di bawah, lalu pastikan udara tetap mengalir.";
   }
-  if (text.includes("sehat")) {
+  if (status === 0) {
     return "Lumutmu dalam kondisi baik. Pertahankan kelembapan dan cahaya seperti sekarang.";
   }
-  return `Perangkat melaporkan status “${(status ?? "").trim().slice(0, 40)}”.`;
+  return "Status tanaman belum dikenali. Periksa koneksi perangkat.";
 }
 
 /**
@@ -112,7 +137,7 @@ export function plantNote(status: string | null | undefined): string {
  * `now` = null (sebelum mount di browser) → insight kesegaran data dilewati.
  */
 export function buildInsights(
-  latest: SensorReading | null | undefined,
+  latest: PublicSensorReading | null | undefined,
   now: number | null,
 ): Insight[] {
   if (!latest) return [];
@@ -139,51 +164,76 @@ export function buildInsights(
     );
   }
 
-  // 2) Kelembapan
-  if (typeof latest.humidity === "number") {
-    const level = humidityLevel(latest.humidity);
-    const h = nf.format(latest.humidity);
+  // 2) Kelembapan tanah
+  if (typeof latest.soil_moisture === "number") {
+    const level = soilLevel(latest.soil_moisture);
+    const h = nf.format(latest.soil_moisture);
     const text =
       level.tone === "good"
-        ? `Kelembapan ${h}% sudah pas untuk lumut.`
-        : latest.humidity < 70
-          ? `Kelembapan ${h}% di bawah kisaran ideal lumut (70–90%). Semprot tipis permukaan lumut dan hindari menaruhnya dekat sumber panas.`
-          : `Kelembapan ${h}% sangat tinggi. Pastikan kipas berputar supaya lumut tidak berjamur.`;
-    list.push({ id: "humidity", tone: level.tone, title: "Kelembapan", text });
+        ? `Kelembapan tanah ${h}% sudah pas untuk lumut.`
+        : latest.soil_moisture < 70
+          ? `Kelembapan tanah ${h}% di bawah kisaran ideal lumut (70–90%). Semprot tipis permukaan lumut dan hindari menaruhnya dekat sumber panas.`
+          : `Kelembapan tanah ${h}% terlalu tinggi. Pastikan kipas berputar supaya lumut tidak berjamur dan kurangi penyiraman.`;
+    list.push({ id: "soil", tone: level.tone, title: "Kelembapan tanah", text });
   }
 
-  // 3) CO₂ dalam ruangan (+ pembanding luar ruangan)
-  if (typeof latest.co2_in === "number") {
-    const level = co2InLevel(latest.co2_in);
-    const ppm = nf.format(latest.co2_in);
-    let text =
+  // 3) PM2.5
+  if (typeof latest.pm25 === "number") {
+    const level = pm25Level(latest.pm25);
+    const text =
       level.tone === "good"
-        ? `CO₂ dalam ruangan ${ppm} ppm — udara terasa segar.`
-        : `CO₂ dalam ruangan ${ppm} ppm. Buka jendela atau pintu sebentar agar udara segar masuk.`;
-    if (
-      typeof latest.co2_out === "number" &&
-      latest.co2_in - latest.co2_out > 600
-    ) {
-      text += ` Selisihnya dengan luar ruangan cukup besar (${nf.format(latest.co2_in - latest.co2_out)} ppm), tanda sirkulasi udara kurang.`;
-    }
-    list.push({ id: "co2", tone: level.tone, title: "CO₂ dalam ruangan", text });
+        ? `PM2.5 ${nf.format(latest.pm25)} — partikel halus rendah, udara terasa bersih.`
+        : `PM2.5 ${nf.format(latest.pm25)} — partikel halus sedang/tinggi. Kurangi aktivitas luar atau tutup jendela sebentar.`;
+    list.push({ id: "pm25", tone: level.tone, title: "Partikulat PM2.5", text });
   }
 
-  // 4) Status tanaman
-  const status = (latest.status ?? "").trim().toLowerCase();
-  if (status) {
-    const tone: InsightTone = status.includes("mati")
-      ? "bad"
-      : status.includes("sakit")
-        ? "warn"
-        : status.includes("sehat")
-          ? "good"
-          : "info";
+  // 4) Fan & LED (persentase aktuator)
+  if (typeof latest.fan === "number") {
+    const level = fanLevel(latest.fan);
+    list.push({
+      id: "fan",
+      tone: level.tone,
+      title: "Kipas",
+      text: `Kecepatan kipas ${nf.format(latest.fan)}% — ${level.label.toLowerCase()}.`,
+    });
+  }
+  if (typeof latest.led === "number") {
+    const level = ledLevel(latest.led);
+    list.push({
+      id: "led",
+      tone: level.tone,
+      title: "Lampu LED",
+      text: `Kecerahan LED ${nf.format(latest.led)}% — ${level.label.toLowerCase()}.`,
+    });
+  }
+
+  // 5) Pompa
+  if (typeof latest.pump === "boolean") {
+    list.push({
+      id: "pump",
+      tone: latest.pump ? "good" : "info",
+      title: "Pompa air",
+      text: latest.pump
+        ? "Pompa sedang menyala — pastikan air tidak menggenangi lumut."
+        : "Pompa sedang mati. Nyalakan kalau kelembapan tanah turun di bawah ideal.",
+    });
+  }
+
+  // 6) Status tanaman
+  if (latest.plant_status !== null && latest.plant_status !== undefined) {
+    const tone: InsightTone =
+      latest.plant_status === 2
+        ? "bad"
+        : latest.plant_status === 1
+          ? "warn"
+          : latest.plant_status === 0
+            ? "good"
+            : "info";
     list.push({
       id: "plant",
       tone,
       title: "Kondisi lumut",
-      text: plantNote(latest.status),
+      text: plantNote(latest.plant_status),
     });
   }
 
@@ -216,8 +266,8 @@ export const MOSS_TIPS: Tip[] = [
     text: "Sirkulasi udara mencegah jamur dan bau apek. Tapi kipas yang terlalu kencang mengeringkan lumut, jadi cukup mengalir pelan.",
   },
   {
-    title: "CO₂ naik? Buka ventilasi",
-    text: "Di atas 1.000 ppm ruangan mulai pengap dan mudah bikin ngantuk. Membuka jendela sebentar biasanya langsung menurunkannya.",
+    title: "PM2.5 tinggi? Tutup jendela",
+    text: "Saat partikel halus naik, tutup jendela sebentar dan hindari aktivitas luar. Lumut membantu sedikit, tapi bukan pengganti filter udara.",
   },
   {
     title: "Lumut bukan pengganti air purifier",

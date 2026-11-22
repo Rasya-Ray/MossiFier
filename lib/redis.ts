@@ -2,35 +2,31 @@ import { createClient, type RedisClientType } from "redis";
 import type { SensorReading } from "@/lib/sensors";
 
 /**
- * Cache "pembacaan terakhir" per device di Upstash Redis (TCP, `REDIS_URL`).
+ * Cache "pembacaan terakhir" per device di Upstash Redis.
  *
- * Kenapa: dashboard butuh 1 baris terakhir secepat mungkin. Membaca Supabase
- * (20 baris riwayat) bisa lambat; Redis hanya menyimpan SATU pembacaan terbaru
- * dengan field yang sama seperti kolom tabel `devices`, plus `cached_at`.
- *
- * Key   : `mossifier:latest:<device_id>`
- * Field : id, device_id, status, air_quality, co2_in, co2_out, humidity,
- *         brightness, fan_speed, created_at, cached_at
- *
- * Redis bersifat opsional: kalau `REDIS_URL` kosong / koneksi gagal, semua
- * fungsi mengembalikan null/false dan route akan fallback ke Supabase.
+ * Key   : `mossifier:latest:<device_id_int>`
+ * Field : id, device_id, created_at, plant_status, vision_conf, soil_moisture,
+ *         soil_raw, mq135_1, mq135_2, pm1, pm25, pm10, pump, fan, led, cached_at
  */
 
 const KEY_PREFIX = "mossifier:latest:";
-/** Cache kedaluwarsa 30 hari supaya device yang hilang tidak menumpuk. */
 const CACHE_TTL_SECONDS = 60 * 60 * 24 * 30;
 
-const NUMERIC_FIELDS = [
-  "air_quality",
-  "co2_in",
-  "co2_out",
-  "humidity",
-  "brightness",
-  "fan_speed",
+const HASH_FIELDS = [
+  "plant_status",
+  "vision_conf",
+  "soil_moisture",
+  "soil_raw",
+  "mq135_1",
+  "mq135_2",
+  "pm1",
+  "pm25",
+  "pm10",
+  "fan",
+  "led",
 ] as const;
 
 export type LatestReading = SensorReading & {
-  /** Epoch ms kapan baris ini terakhir ditulis ke Redis. */
   cached_at: number;
 };
 
@@ -40,11 +36,11 @@ type RedisGlobal = typeof globalThis & {
 
 const globalForRedis = globalThis as RedisGlobal;
 
-function latestKey(deviceId: string): string {
+function latestKey(deviceId: number): string {
   return `${KEY_PREFIX}${deviceId}`;
 }
 
-/** Client singleton (aman untuk HMR di dev). */
+/** Client singleton (aman untuk HMR). */
 export async function getRedisClient(): Promise<RedisClientType | null> {
   const url = process.env.REDIS_URL;
   if (!url) return null;
@@ -59,7 +55,6 @@ export async function getRedisClient(): Promise<RedisClientType | null> {
       },
     });
 
-    // Jangan pernah log URL (berisi password).
     client.on("error", (error) => {
       console.error("[redis]", error.message);
     });
@@ -82,16 +77,23 @@ function serialize(
 ): Record<string, string> {
   const record: Record<string, string> = {
     id: reading.id,
-    device_id: reading.device_id,
-    status: reading.status ?? "",
+    device_id: String(reading.device_id),
     created_at: reading.created_at,
     cached_at: String(cachedAt),
   };
 
-  for (const field of NUMERIC_FIELDS) {
-    const value = reading[field];
+  for (const field of HASH_FIELDS) {
+    const value = reading[field as keyof SensorReading];
     record[field] = value === null || value === undefined ? "" : String(value);
   }
+
+  // pump (boolean)
+  record.pump =
+    reading.pump === null || reading.pump === undefined
+      ? ""
+      : reading.pump
+        ? "1"
+        : "0";
 
   return record;
 }
@@ -102,33 +104,46 @@ function toNumber(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function toBool(value: string | undefined): boolean | null {
+  if (value === undefined || value === "") return null;
+  return value === "1" || value.toLowerCase() === "true";
+}
+
 function deserialize(hash: Record<string, string>): LatestReading | null {
-  const deviceId = hash.device_id?.trim();
+  const deviceIdStr = hash.device_id?.trim();
   const createdAt = hash.created_at?.trim();
-  if (!deviceId || !createdAt || Number.isNaN(Date.parse(createdAt))) {
+  if (!deviceIdStr || !createdAt || Number.isNaN(Date.parse(createdAt))) {
     return null;
   }
+
+  const deviceId = Number(deviceIdStr);
+  if (!Number.isInteger(deviceId)) return null;
 
   const cachedAt = Number(hash.cached_at);
 
   return {
     id: hash.id || `${deviceId}:${createdAt}`,
     device_id: deviceId,
-    status: hash.status ? hash.status : null,
-    air_quality: toNumber(hash.air_quality),
-    co2_in: toNumber(hash.co2_in),
-    co2_out: toNumber(hash.co2_out),
-    humidity: toNumber(hash.humidity),
-    brightness: toNumber(hash.brightness),
-    fan_speed: toNumber(hash.fan_speed),
     created_at: createdAt,
+    plant_status: toNumber(hash.plant_status),
+    vision_conf: toNumber(hash.vision_conf),
+    soil_moisture: toNumber(hash.soil_moisture),
+    soil_raw: toNumber(hash.soil_raw),
+    mq135_1: toNumber(hash.mq135_1),
+    mq135_2: toNumber(hash.mq135_2),
+    pm1: toNumber(hash.pm1),
+    pm25: toNumber(hash.pm25),
+    pm10: toNumber(hash.pm10),
+    pump: toBool(hash.pump),
+    fan: toNumber(hash.fan),
+    led: toNumber(hash.led),
     cached_at: Number.isFinite(cachedAt) ? cachedAt : 0,
   };
 }
 
-/** Baca pembacaan terakhir dari Redis. `null` kalau kosong / Redis bermasalah. */
+/** Baca pembacaan terakhir dari Redis berdasarkan device_id (int). */
 export async function getCachedLatest(
-  deviceId: string,
+  deviceId: number,
 ): Promise<LatestReading | null> {
   try {
     const client = await getRedisClient();
@@ -140,15 +155,17 @@ export async function getCachedLatest(
     return deserialize(hash);
   } catch (error) {
     console.error(
-      "[redis] gagal membaca data terakhir:",
+      "[redis] gagal membaca:",
       error instanceof Error ? error.message : error,
     );
     return null;
   }
 }
 
-/** Simpan pembacaan terbaru ke Redis. `false` kalau Redis tidak tersedia. */
-export async function setCachedLatest(reading: SensorReading): Promise<boolean> {
+/** Simpan pembacaan terbaru ke Redis. */
+export async function setCachedLatest(
+  reading: SensorReading,
+): Promise<boolean> {
   try {
     const client = await getRedisClient();
     if (!client) return false;
@@ -159,7 +176,6 @@ export async function setCachedLatest(reading: SensorReading): Promise<boolean> 
       current &&
       Date.parse(current.created_at) > Date.parse(reading.created_at)
     ) {
-      // INSERT Realtime dapat tiba tidak berurutan; jangan timpa data yang baru.
       return true;
     }
 
@@ -172,7 +188,7 @@ export async function setCachedLatest(reading: SensorReading): Promise<boolean> 
     return true;
   } catch (error) {
     console.error(
-      "[redis] gagal menyimpan data terakhir:",
+      "[redis] gagal menyimpan:",
       error instanceof Error ? error.message : error,
     );
     return false;

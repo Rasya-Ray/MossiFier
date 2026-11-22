@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { useSession } from "@/components/auth/session-provider";
 import { formatDateTime } from "@/lib/format";
-import { formatPlantStatus } from "@/lib/labels";
+import { plantStatusText } from "@/lib/labels";
 import {
   TONE_LABEL,
   buildInsights,
@@ -62,9 +62,7 @@ export function Overview() {
   if (live.isFetching && !live.latest) return <DashboardSkeleton />;
 
   const latest = live.latest;
-  const plantValue = latest?.status
-    ? formatPlantStatus(latest.status)
-    : "Belum ada data";
+  const plantValue = plantStatusText(latest?.plant_status);
 
   // `now` null = sebelum mount di browser → sapaan netral agar tidak hydration mismatch.
   const greeting = now === null ? "Halo" : greetingFor(new Date(now).getHours());
@@ -132,7 +130,7 @@ export function Overview() {
               {plantValue}
             </motion.p>
             <p className="mt-3 max-w-md text-sm leading-6 text-forest-mist/70">
-              {plantNote(latest?.status)}
+              {plantNote(latest?.plant_status)}
             </p>
           </div>
           <div className="flex flex-row items-center gap-3 rounded-3xl bg-white/10 p-4 shadow-glass-sm backdrop-blur-xl sm:flex-col sm:p-5">
@@ -269,8 +267,8 @@ export function Overview() {
         variants={itemVariants}
         className="mt-10 border-t border-white/20 pt-6 text-center text-xs leading-5 text-forest-mist/60"
       >
-        Perangkat {latest?.device_id ?? "—"} · Data diperbarui otomatis tanpa
-        perlu refresh
+        Perangkat {deviceId ?? "—"} · Data diperbarui otomatis tanpa perlu
+        refresh
       </motion.footer>
     </motion.main>
   );

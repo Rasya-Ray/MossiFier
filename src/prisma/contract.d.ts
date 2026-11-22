@@ -23,9 +23,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'702fc1c6b6ee340a8c94eaec7e7cf0df2bc0423d3cd38e7dd287701bf5f6c18f'>;
+  StorageHashBase<'fe43837330fe408658522dabd6da80d4ab8293c372f01cc6bd722e6c82d2825c'>;
 export type ExecutionHash =
-  ExecutionHashBase<'4397132f1fa08a837984376c5ce2daa95842386f70757a2a9c3b597ff2cc24d1'>;
+  ExecutionHashBase<'34fdceafe2648e6ebaf0c7f68828f0aa9e5f075078373d0aef4f67d33e745fdf'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -310,17 +310,32 @@ export type StorageColumnInputTypes = ColumnTypesFromStorage<
 
 export namespace Models {
   export type public_Device = {
-    air_quality: FieldOutputTypes['public']['Device']['air_quality'];
-    brightness: FieldOutputTypes['public']['Device']['brightness'];
-    co2_in: FieldOutputTypes['public']['Device']['co2_in'];
-    co2_out: FieldOutputTypes['public']['Device']['co2_out'];
+    claimed_at: FieldOutputTypes['public']['Device']['claimed_at'];
     created_at: FieldOutputTypes['public']['Device']['created_at'];
-    device_id: FieldOutputTypes['public']['Device']['device_id'];
-    fan_speed: FieldOutputTypes['public']['Device']['fan_speed'];
-    humidity: FieldOutputTypes['public']['Device']['humidity'];
     id: FieldOutputTypes['public']['Device']['id'];
-    status: FieldOutputTypes['public']['Device']['status'];
-    readonly [RelationKeys]?: never;
+    mac_address: FieldOutputTypes['public']['Device']['mac_address'];
+    name: FieldOutputTypes['public']['Device']['name'];
+    user_id: FieldOutputTypes['public']['Device']['user_id'];
+    owner: public_User | null;
+    readonly [RelationKeys]?: 'owner';
+  };
+  export type public_SensorReading = {
+    created_at: FieldOutputTypes['public']['SensorReading']['created_at'];
+    device_id: FieldOutputTypes['public']['SensorReading']['device_id'];
+    fan: FieldOutputTypes['public']['SensorReading']['fan'];
+    id: FieldOutputTypes['public']['SensorReading']['id'];
+    led: FieldOutputTypes['public']['SensorReading']['led'];
+    mq135_1: FieldOutputTypes['public']['SensorReading']['mq135_1'];
+    mq135_2: FieldOutputTypes['public']['SensorReading']['mq135_2'];
+    plant_status: FieldOutputTypes['public']['SensorReading']['plant_status'];
+    pm1: FieldOutputTypes['public']['SensorReading']['pm1'];
+    pm25: FieldOutputTypes['public']['SensorReading']['pm25'];
+    pump: FieldOutputTypes['public']['SensorReading']['pump'];
+    soil_moisture: FieldOutputTypes['public']['SensorReading']['soil_moisture'];
+    soil_raw: FieldOutputTypes['public']['SensorReading']['soil_raw'];
+    vision_conf: FieldOutputTypes['public']['SensorReading']['vision_conf'];
+    device: public_Device;
+    readonly [RelationKeys]?: 'device';
   };
   export type public_User = {
     created_at: FieldOutputTypes['public']['User']['created_at'];
@@ -335,6 +350,7 @@ export namespace Models {
 export declare const models: {
   public: {
     Device: Models.public_Device;
+    SensorReading: Models.public_SensorReading;
     User: Models.public_User;
   };
 };
@@ -359,28 +375,11 @@ type ContractBase = Omit<
           readonly table: {
             readonly devices: {
               columns: {
-                readonly air_quality: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
+                readonly claimed_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-date@1';
                   readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly brightness: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly co2_in: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly co2_out: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
                   readonly many: false;
                 };
                 readonly created_at: {
@@ -391,21 +390,79 @@ type ContractBase = Omit<
                   readonly typeParams: { readonly precision: 3 };
                   readonly many: false;
                 };
-                readonly device_id: {
+                readonly id: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'function';
+                    readonly expression: 'autoincrement()';
+                  };
+                  readonly many: false;
+                };
+                readonly mac_address: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: false;
                   readonly many: false;
                 };
-                readonly fan_speed: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
+                readonly name: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
                   readonly nullable: true;
                   readonly many: false;
                 };
-                readonly humidity: {
+                readonly user_id: {
+                  readonly dataType: 'pg/uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [{ readonly columns: readonly ['mac_address'] }];
+              indexes: readonly [
+                {
+                  readonly name: 'devices_owner_6c952402';
+                  readonly prefix: 'devices_owner';
+                  readonly columns: readonly ['user_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'devices';
+                    readonly columns: readonly ['user_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'users';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
+            readonly sensor_readings: {
+              columns: {
+                readonly created_at: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-date@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly device_id: {
                   readonly dataType: 'pg/int4';
                   readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly fan: {
+                  readonly dataType: 'pg/float4';
+                  readonly codecId: 'pg/float4@1';
                   readonly nullable: true;
                   readonly many: false;
                 };
@@ -419,17 +476,97 @@ type ContractBase = Omit<
                   };
                   readonly many: false;
                 };
-                readonly status: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
+                readonly led: {
+                  readonly dataType: 'pg/float4';
+                  readonly codecId: 'pg/float4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly mq135_1: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly mq135_2: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly plant_status: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly pm1: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly pm25: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly pump: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly soil_moisture: {
+                  readonly dataType: 'pg/float4';
+                  readonly codecId: 'pg/float4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly soil_raw: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly vision_conf: {
+                  readonly dataType: 'pg/float4';
+                  readonly codecId: 'pg/float4@1';
                   readonly nullable: true;
                   readonly many: false;
                 };
               };
               primaryKey: { readonly columns: readonly ['id'] };
               uniques: readonly [];
-              indexes: readonly [];
-              foreignKeys: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'sensor_readings_device_desc_722ed4f4';
+                  readonly prefix: 'sensor_readings_device_desc';
+                  readonly columns: readonly ['device_id', 'created_at'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'sensor_readings_device_id_idx_8f329912';
+                  readonly prefix: 'sensor_readings_device_id_idx';
+                  readonly columns: readonly ['device_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'sensor_readings';
+                    readonly columns: readonly ['device_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'devices';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
             };
             readonly users: {
               columns: {
@@ -483,6 +620,10 @@ type ContractBase = Omit<
   readonly targetFamily: 'sql';
   readonly roots: {
     readonly devices: { readonly namespace: 'public' & NamespaceId; readonly model: 'Device' };
+    readonly sensor_readings: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'SensorReading';
+    };
     readonly users: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
   };
   readonly domain: {
@@ -491,22 +632,65 @@ type ContractBase = Omit<
         readonly models: {
           readonly Device: {
             readonly fields: {
-              readonly air_quality: {
+              readonly claimed_at: {
                 readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-date@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly created_at: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-date@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly id: {
+                readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
-              readonly brightness: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              readonly mac_address: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
-              readonly co2_in: {
+              readonly name: {
                 readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
-              readonly co2_out: {
+              readonly user_id: {
                 readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
+            };
+            readonly relations: {
+              readonly owner: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['user_id'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'devices';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly claimed_at: { readonly column: 'claimed_at' };
+                readonly created_at: { readonly column: 'created_at' };
+                readonly id: { readonly column: 'id' };
+                readonly mac_address: { readonly column: 'mac_address' };
+                readonly name: { readonly column: 'name' };
+                readonly user_id: { readonly column: 'user_id' };
+              };
+            };
+          };
+          readonly SensorReading: {
+            readonly fields: {
               readonly created_at: {
                 readonly nullable: false;
                 readonly type: {
@@ -517,40 +701,89 @@ type ContractBase = Omit<
               };
               readonly device_id: {
                 readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly fan_speed: {
-                readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
-              readonly humidity: {
+              readonly fan: {
                 readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float4@1' };
               };
               readonly id: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
-              readonly status: {
+              readonly led: {
                 readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float4@1' };
+              };
+              readonly mq135_1: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly mq135_2: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly plant_status: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly pm1: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly pm25: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly pump: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly soil_moisture: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float4@1' };
+              };
+              readonly soil_raw: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly vision_conf: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float4@1' };
               };
             };
-            readonly relations: Record<string, never>;
+            readonly relations: {
+              readonly device: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Device';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['device_id'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
             readonly storage: {
-              readonly table: 'devices';
+              readonly table: 'sensor_readings';
               readonly namespaceId: 'public';
               readonly fields: {
-                readonly air_quality: { readonly column: 'air_quality' };
-                readonly brightness: { readonly column: 'brightness' };
-                readonly co2_in: { readonly column: 'co2_in' };
-                readonly co2_out: { readonly column: 'co2_out' };
                 readonly created_at: { readonly column: 'created_at' };
                 readonly device_id: { readonly column: 'device_id' };
-                readonly fan_speed: { readonly column: 'fan_speed' };
-                readonly humidity: { readonly column: 'humidity' };
+                readonly fan: { readonly column: 'fan' };
                 readonly id: { readonly column: 'id' };
-                readonly status: { readonly column: 'status' };
+                readonly led: { readonly column: 'led' };
+                readonly mq135_1: { readonly column: 'mq135_1' };
+                readonly mq135_2: { readonly column: 'mq135_2' };
+                readonly plant_status: { readonly column: 'plant_status' };
+                readonly pm1: { readonly column: 'pm1' };
+                readonly pm25: { readonly column: 'pm25' };
+                readonly pump: { readonly column: 'pump' };
+                readonly soil_moisture: { readonly column: 'soil_moisture' };
+                readonly soil_raw: { readonly column: 'soil_raw' };
+                readonly vision_conf: { readonly column: 'vision_conf' };
               };
             };
           };
@@ -644,9 +877,21 @@ type ContractBase = Omit<
           };
         },
         {
+          readonly onCreate: {
+            readonly id: 'timestampNow';
+            readonly kind: 'generator';
+            readonly params: { readonly precision: 3 };
+          };
+          readonly ref: {
+            readonly entry: 'sensor_readings';
+            readonly field: 'created_at';
+            readonly namespace: 'public';
+          };
+        },
+        {
           readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
           readonly ref: {
-            readonly entry: 'devices';
+            readonly entry: 'sensor_readings';
             readonly field: 'id';
             readonly namespace: 'public';
           };

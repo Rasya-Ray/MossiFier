@@ -29,21 +29,21 @@ Dilarang: `text-zinc-*`, `bg-slate-*`, `text-black`, `bg-white` solid, `#000`, w
 
 Latar hutan: `components/layout/forest-background.tsx` (dipasang sekali di `app/layout.tsx`, gambar `public/forest.svg`). Home/login/register memakai latar apa adanya; `app/dashboard/layout.tsx` menambah overlay `bg-forest-night/60` agar data lebih terbaca. Jangan taruh teks langsung di atas latar tanpa panel kaca/overlay.
 
-## 3. Aturan data sensor (Supabase Realtime)
+## 3. Aturan data sensor (Supabase RPC + Redis)
 
-Sumber data utama: tabel **`devices`** di Supabase PostgreSQL. Skema Prisma 8 ada di `src/prisma/contract.ts` (bukan `prisma/schema.prisma`).
+Sumber data: tabel **`devices`** (identitas perangkat) dan **`sensor_readings`** (riwayat pembacaan). Skema Prisma 8 ada di `src/prisma/contract.ts` (bukan `prisma/schema.prisma`).
 
-- ESP32 POST JSON ke Supabase REST: `POST {NEXT_PUBLIC_SUPABASE_URL}/rest/v1/devices` dengan kolom `device_id`, `status`, `air_quality`, `co2_in`, `co2_out`, `humidity`, `brightness`, `fan_speed`. Satu baris = satu kiriman (riwayat), jadi `device_id` tidak unik.
-- Nilai utama "data terakhir" dibaca dari Upstash Redis lewat `GET /api/readings/latest?deviceId=...` (Redis-first; jika key belum ada, fallback satu baris terbaru Supabase lalu isi Redis). Redis key `mossifier:latest:<device_id>` memakai hash field sesuai kolom input: `id`, `device_id`, `status`, `air_quality`, `co2_in`, `co2_out`, `humidity`, `brightness`, `fan_speed`, `created_at`, ditambah `cached_at`; TTL 30 hari. `REDIS_URL` hanya server-side di `.env`, jangan pernah di-import ke client.
-- Client memakai `components/dashboard/use-realtime.ts`: ambil 20 baris terakhir untuk grafik, subscribe `postgres_changes` (INSERT), lalu kirim pembacaan baru ke `POST /api/readings/latest` agar Redis tetap menunjuk data terkini saat dashboard aktif. **Tidak ada polling 7,5 detik.** Timestamp `created_at` selalu ditampilkan sebagai waktu data sensor; jika lebih dari 10 menit, UI menandainya sebagai data terakhir/perangkat mungkin offline.
-- Supaya Redis terus diperbarui walau tidak ada dashboard terbuka, konfigurasi Supabase Database Webhook untuk event `INSERT` tabel `public.devices` ke `/api/readings/ingest`, dengan header `x-mossifier-webhook-secret`. Secret yang sama wajib disimpan hanya di env server `READINGS_WEBHOOK_SECRET`.
-- Akun tanpa device tersimpan memakai `NEXT_PUBLIC_DEFAULT_DEVICE_ID` (fallback `MOSS-B0A7322B0960`) supaya akun baru langsung melihat perangkat; pilihan device manual per akun tetap menang.
-- Kredensial client hanya `NEXT_PUBLIC_SUPABASE_URL` + anon/publishable key (`lib/supabase.ts`). `DATABASE_URL` hanya untuk Prisma CLI/server, jangan pernah di-import ke client.
+- Identitas device = `devices.mac_address`, 12 hex huruf besar unik (mis. `B0A7322B0960`). `devices.id` adalah integer auto-increment, **internal saja**, tidak pernah dikirim ke browser. Baris device dibuat oleh RPC `register_device(p_mac TEXT)` yang idempotent — jangan pakai trigger atau endpoint Next.js untuk ini.
+- ESP32 memanggil RPC lewat PostgREST: `POST {NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/register_device` saat boot, lalu `POST /rest/v1/rpc/insert_sensor` tiap kirim. Parameter sensor: `p_mac`, `p_plant_status` (0=Sehat, 1=Sakit, 2=Mati), `p_vision_conf` (0–1), `p_soil_moisture`, `p_soil_raw`, `p_mq135_1`, `p_mq135_2`, `p_pm1`, `p_pm25`, `p_pm10`, `p_pump` (boolean), `p_fan` dan `p_led` (**REAL persentase 0–100**, bukan boolean). Contoh firmware: `esp32_upgrade.ino`.
+- RLS aktif pada `devices` dan `sensor_readings` **tanpa policy anon**. Semua query server memakai service_role lewat `lib/supabase-admin.ts` (env `SUPABASE_SERVICE_ROLE_KEY`, server-only). Browser tidak bisa query/Realtime tabel ini langsung. Jangan menambah policy anon manual.
+- `lib/device-access.ts` memetakan MAC → `devices.id` sekaligus mengecek kepemilikan. Endpoint `/api/readings/latest`, `/api/readings/history`, `/api/chat`, dan `/api/device/*` wajib memakainya supaya user tidak bisa membaca device milik orang lain. Sesi demo hanya boleh membaca MAC pameran (`DEMO_DEVICE_MAC` / `DEFAULT_DEVICE_MAC`).
+- Klaim device lewat sidebar → `POST /api/device/claim` (MAC harus sudah terdaftar). Idempotent kalau pemiliknya sama, `409` kalau sudah diklaim orang lain. Lepas klaim: `/api/device/release`; daftar device: `/api/device/list`.
+- Data terakhir: `GET /api/readings/latest?macAddress=...` (Redis-first; kalau kosong ambil 1 baris terbaru Supabase lalu isi Redis). Key `mossifier:latest:<devices.id>` (integer), field mengikuti kolom `sensor_readings` + `cached_at`, TTL 30 hari. `REDIS_URL` hanya server-side.
+- Riwayat grafik: `GET /api/readings/history?macAddress=...&limit=20`. `components/dashboard/use-realtime.ts` memanggil keduanya lalu **polling 10 detik** (bukan Realtime browser). Timestamp `created_at` selalu jadi waktu data; kalau > 10 menit, UI menandainya sebagai data terakhir/perangkat mungkin offline.
+- Supabase Database Webhook untuk event `INSERT` tabel `public.sensor_readings` → `/api/readings/ingest` dengan header `x-mossifier-webhook-secret` (sama dengan `READINGS_WEBHOOK_SECRET` di `.env`) supaya Redis tetap segar walau tidak ada dashboard terbuka.
+- Akun tanpa device tersimpan memakai `NEXT_PUBLIC_DEFAULT_DEVICE_MAC` (fallback `B0A7322B0960`); pilihan manual per akun tetap menang. Kredensial client hanya `NEXT_PUBLIC_SUPABASE_URL` + publishable key (`lib/supabase.ts`). `DATABASE_URL` hanya untuk Prisma CLI/server, jangan pernah di-import ke client.
 - Semua environment variable disimpan di **`.env`** (bukan `.env.local`) — dibaca Next.js dan `prisma.config.ts` (`dotenv/config`).
-- Supabase harus mengaktifkan Realtime untuk tabel `devices` (`alter publication supabase_realtime add table devices`) plus policy RLS `select`/`insert` untuk anon. Policy anon **dideklarasikan di contract** (`rlsEnabled` + `policySelect` + `policyInsert` di `src/prisma/contract.ts`), jadi jangan bikin policy manual lagi — `npx prisma db update` akan menamainya ulang dengan hash.
-- `devices.id` punya default database `gen_random_uuid()`, jadi ESP32 cukup POST kolom sensor (tanpa `id`). Ini wajib; tanpa default, REST insert ditolak `400`.
-- Status tanaman dikirim perangkat sebagai **teks langsung** (mis. `"Sehat"`, `"Sakit"`, `"Mati"`), bukan kode angka. Nilai dari kolom `status` ditampilkan apa adanya (lihat `lib/labels.ts`).
-- Skema Prisma hanya dua tabel: `users` (akun login) dan `devices` (data sensor). Login/register **nyata**: password di-hash `scrypt` (`lib/auth/password.ts`), sesi disimpan di cookie HttpOnly bertanda tangan HMAC (`lib/auth/token.ts`), dan `proxy.ts` menolak `/dashboard` tanpa sesi valid. Device yang dipantau dipilih user di sidebar (disimpan di localStorage lewat `lib/device-store.ts`); tanpa device, dashboard menampilkan empty state (bukan 0).
+- Login/register **nyata**: password di-hash `scrypt` (`lib/auth/password.ts`), sesi disimpan di cookie HttpOnly bertanda tangan HMAC (`lib/auth/token.ts`), dan `proxy.ts` menolak `/dashboard` tanpa sesi valid. Tanpa device, dashboard menampilkan empty state (bukan 0).
 
 ## 4. Struktur
 
@@ -57,7 +57,7 @@ components/
     session-provider.tsx      # teruskan user dari layout server ke client
   device/
     device-provider.tsx       # context device aktif + dialog
-    device-dialog.tsx         # modal tambah/ganti device_id
+    device-dialog.tsx         # modal tambah/ganti device (MAC 12 hex + klaim)
     no-device.tsx             # empty state kalau belum pilih device
   home/
     home.tsx                  # landing (hero, fitur, cara kerja, CTA)
@@ -70,12 +70,12 @@ components/
   ui/index.ts                 # barrel export: @/components/ui
   dashboard/
     sidebar.tsx               # sidebar desktop + topbar mobile (device + logout)
-    chat-widget.tsx           # tombol chat kanan bawah + popup chat AI (riwayat di state)
+    chat-widget.tsx           # tombol chat kanan bawah + popup chat AI (riwayat di Redis)
     chat-markdown.tsx         # renderer markdown mini untuk balasan AI (aman, tanpa HTML mentah)
     overview.tsx              # halaman dashboard utama (data terbaru)
     field-view.tsx            # halaman generik 1 kolom (termasuk status tanaman)
-    air-quality-view.tsx      # kualitas udara + CO2 in/out
-    use-realtime.ts           # Supabase Realtime (INSERT) per device_id
+    air-quality-view.tsx      # MQ-135 (2 sensor) + PM1.0/PM2.5/PM10
+    use-realtime.ts           # API server (latest + history) + polling 10 detik
     live-status.tsx           # badge LIVE + indikator fetch
     trend-chart.tsx           # grafik garis generik 1–2 seri
     stat-card.tsx             # kartu statistik
@@ -92,33 +92,45 @@ app/
     logout/route.ts           # hapus cookie sesi
     me/route.ts               # user dari cookie (debug)
     demo/route.ts             # sesi demo juri tanpa baris tabel users
+  api/device/
+    claim/route.ts            # klaim device by MAC (idempotent)
+    list/route.ts             # daftar device milik user
+    release/route.ts          # lepas klaim device
   api/chat/route.ts           # chatbot: cek sesi → baca sensor → OpenRouter (stream teks)
-  api/readings/latest/route.ts # latest Redis-first + cache write dari Realtime
+  api/readings/latest/route.ts # latest Redis-first (MAC → devices.id)
+  api/readings/history/route.ts # riwayat 20 baris untuk grafik
   api/readings/ingest/route.ts # Supabase Database Webhook ke Redis
   dashboard/
     layout.tsx                # guard sesi + sidebar + chat widget
     page.tsx                  # overview (data terbaru)
-    air-quality/page.tsx      # kualitas udara + CO2 in/out
-    kelembapan/page.tsx       # humidity
-    kecepatan-fan/page.tsx    # fan_speed
-    kecerahan/page.tsx        # brightness
-    status-tanaman/page.tsx   # status tanaman (teks langsung dari Supabase)
+    air-quality/page.tsx      # MQ-135 + partikulat
+    kelembapan/page.tsx       # soil_moisture
+    kecepatan-fan/page.tsx    # fan (persen)
+    kecerahan/page.tsx        # led (persen)
+    status-tanaman/page.tsx   # plant_status (0=Sehat, 1=Sakit, 2=Mati)
   globals.css               # 5 CSS variable hutan + @theme inline + shadow glass
   layout.tsx                # metadata, font, ToastProvider
   robots.ts                 # SEO /robots.txt
   sitemap.ts                # SEO /sitemap.xml
 lib/
-  supabase.ts               # Supabase browser client (anon key)
-  sensors.ts                # tipe + label + helper data sensor
+  supabase.ts               # Supabase browser client (publishable key)
+  supabase-admin.ts         # Supabase service_role client (server-only)
+  device-access.ts          # resolve MAC → id + cek kepemilikan device
+  demo.ts                   # sesi & MAC pameran, default device
+  sensors.ts                # tipe + kolom + label + helper sensor_readings
   format.ts                 # format tanggal konsisten (anti hydration mismatch)
-  labels.ts                 # format teks status tanaman (apa adanya)
-  device-store.ts           # device_id aktif (localStorage + useSyncExternalStore)
+  labels.ts                 # kode plant_status 0/1/2 → teks
+  insights.ts               # kalimat penjelasan & ambang batas dashboard
+  device-store.ts           # MAC aktif (localStorage + useSyncExternalStore)
+  readings-cache.ts         # cache tampilan terakhir (localStorage)
   redis.ts                  # Upstash Redis latest-reading cache (server-only)
   readings/
     validation.ts            # validasi row sensor dari Supabase/webhook
   chat/
     knowledge.ts            # system prompt: persona + pengetahuan Mossifier & udara
     sensor-context.ts       # ambil data sensor dari Supabase → blok teks konteks AI
+    memory.ts               # riwayat chat per akun di Redis
+    upstream.ts             # retry + model cadangan OpenRouter
     types.ts                # tipe + batas pesan chat
   auth/
     types.ts                # SessionUser
@@ -127,7 +139,7 @@ lib/
     session.ts              # getSession/setSessionCookie/clearSessionCookie
     users.ts                # query tabel users (Prisma 8)
 proxy.ts                    # gate /dashboard ↔ /login & /register
-esp32_upgrade.ino           # firmware ESP32 → POST /rest/v1/devices (URL + anon key dari .env)
+esp32_upgrade.ino           # firmware ESP32 → RPC register_device + insert_sensor
 public/                     # aset statis (favicon, gambar, dll.)
 ```
 
@@ -168,11 +180,11 @@ Setiap selesai fitur, jalankan `npm run build` dan pastikan tidak ada error tipe
 
 ## 8. Chatbot AI (OpenRouter)
 
-- Alur: `chat-widget.tsx` → `POST /api/chat` (`{messages, deviceId}`) → server cek sesi, ambil 20 baris sensor terakhir device itu dari Supabase (`lib/chat/sensor-context.ts`), lalu memanggil OpenRouter `/chat/completions` (format OpenAI-compatible) dengan `stream: true` dan meneruskan balasan sebagai teks polos.
+- Alur: `chat-widget.tsx` → `POST /api/chat` (`{messages, deviceId}`; `deviceId` = MAC) → server cek sesi + kepemilikan device, ambil 20 baris `sensor_readings` terakhir lewat `lib/chat/sensor-context.ts`, lalu memanggil OpenRouter `/chat/completions` (format OpenAI-compatible) dengan `stream: true` dan meneruskan balasan sebagai teks polos.
 - **API key hanya di server.** Env (di `.env`, tanpa awalan `NEXT_PUBLIC_`): `OPENROUTER_API_KEY` (wajib), `OPENROUTER_MODEL` (default `google/gemini-3.5-flash-lite`), `OPENROUTER_BASE_URL` (default `https://openrouter.ai/api/v1`). Jangan pernah mengimpor/menyebut key di komponen client.
-- Persona dan pengetahuan (Mossifier, CO₂, kelembapan, cahaya, lumut) ada di `lib/chat/knowledge.ts`. Data live disisipkan sebagai pesan sistem kedua, bukan di prompt statis. Kalau menambah kolom sensor baru, update `SENSOR_KEYS`/`SENSOR_LABELS` di `lib/sensors.ts` dan deskripsi di `knowledge.ts`.
-- Keamanan: wajib sesi login, `deviceId` divalidasi regex, pesan dibatasi (12 riwayat × 1000 karakter), rate limit 15 pesan/menit/user (in-memory, per instance), teks status dari perangkat dibersihkan sebelum masuk prompt, detail error penyedia AI hanya di log server.
-- **Riwayat chat per akun** (`lib/chat/history.ts`): disimpan di localStorage dengan key `mossifier.chat.<userId>` (maks 30 pesan). `ChatWidget` di `app/dashboard/layout.tsx` wajib diberi `key={user.id}` — Next.js (`cacheComponents`) mempertahankan state halaman lama saat pindah halaman, tanpa key akun B bisa melihat chat akun A. Akun demo (`isDemoUser`) tidak pernah disimpan dan dikosongkan lewat event `CHAT_RESET_EVENT` yang dikirim `sidebar.tsx` saat logout.
+- Persona dan pengetahuan (Mossifier, MQ-135, partikulat, kelembapan tanah, cahaya, kipas, pompa, lumut) ada di `lib/chat/knowledge.ts`. Data live disisipkan sebagai pesan sistem kedua, bukan di prompt statis. Kalau menambah kolom sensor baru, update `SENSOR_KEYS`/`SENSOR_LABELS`/`SENSOR_COLUMNS` di `lib/sensors.ts` dan deskripsi di `knowledge.ts`. Ambang batas harus sama dengan `lib/insights.ts`.
+- Keamanan: wajib sesi login, `deviceId` (MAC) divalidasi regex 12 hex **dan** dicek kepemilikannya lewat `lib/device-access.ts`, pesan dibatasi (12 riwayat × 1000 karakter), rate limit 15 pesan/menit/user (in-memory, per instance), detail error penyedia AI hanya di log server.
+- **Riwayat chat per akun** (`lib/chat/memory.ts`): disimpan di Redis dengan key `mossifier:chat:<userId>` (maks 40 pesan, TTL 30 hari). `ChatWidget` di `app/dashboard/layout.tsx` wajib diberi `key={user.id}` — Next.js (`cacheComponents`) mempertahankan state halaman lama saat pindah halaman, tanpa key akun B bisa melihat chat akun A. Akun demo (`isDemoUser`) tidak pernah disimpan dan dikosongkan lewat event `CHAT_RESET_EVENT` yang dikirim `sidebar.tsx` saat logout.
 - Balasan AI dirender lewat `chat-markdown.tsx` (node React, bukan `dangerouslySetInnerHTML`).
 
 ## 9. Logo, avatar, dan insight dashboard

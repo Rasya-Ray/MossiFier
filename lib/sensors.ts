@@ -1,120 +1,155 @@
 /**
- * Tipe + helper data sensor. Sumber data: tabel `devices` di Supabase.
- * Setiap baris = satu kiriman ESP32 (riwayat), bukan satu perangkat unik.
+ * Tipe + helper data sensor baru (tabel `sensor_readings`).
+ * Setiap baris = satu kiriman ESP32 (riwayat).
  */
 
-import { formatPlantStatus } from "@/lib/labels";
+import { plantStatusText } from "@/lib/labels";
 
 export const SENSOR_KEYS = [
-  "air_quality",
-  "co2_in",
-  "co2_out",
-  "humidity",
-  "brightness",
-  "fan_speed",
+  "plant_status",
+  "vision_conf",
+  "soil_moisture",
+  "soil_raw",
+  "mq135_1",
+  "mq135_2",
+  "pm1",
+  "pm25",
+  "pm10",
+  "pump",
+  "fan",
+  "led",
 ] as const;
 
 export type SensorKey = (typeof SENSOR_KEYS)[number];
 
-/** Kolom yang bisa ditampilkan di halaman detail (termasuk status tanaman). */
-export type SensorFieldKey = SensorKey | "status";
+/** Kolom yang bisa ditampilkan di halaman detail. */
+export type SensorFieldKey = SensorKey;
 
 export type SensorReading = {
   id: string;
-  device_id: string;
-  status: string | null;
-  air_quality: number | null;
-  co2_in: number | null;
-  co2_out: number | null;
-  humidity: number | null;
-  brightness: number | null;
-  fan_speed: number | null;
+  /** FK integer ke devices.id — dipetakan lewat MAC di sisi server. */
+  device_id: number;
   created_at: string;
+  plant_status: number | null;
+  vision_conf: number | null;
+  soil_moisture: number | null;
+  soil_raw: number | null;
+  mq135_1: number | null;
+  mq135_2: number | null;
+  pm1: number | null;
+  pm25: number | null;
+  pm10: number | null;
+  pump: boolean | null;
+  /** Persentase kecepatan kipas 0–100 */
+  fan: number | null;
+  /** Persentase kecerahan LED 0–100 */
+  led: number | null;
 };
 
-/** Kolom yang di-select dari Supabase (urutan tetap, biar payload kecil). */
+/** Kolom yang di-select dari Supabase (urutan tabel sensor_readings). */
 export const SENSOR_COLUMNS =
-  "id, device_id, status, air_quality, co2_in, co2_out, humidity, brightness, fan_speed, created_at";
+  "id, device_id, created_at, plant_status, vision_conf, soil_moisture, soil_raw, mq135_1, mq135_2, pm1, pm25, pm10, pump, fan, led";
 
 export const SENSOR_LABELS: Record<SensorFieldKey, string> = {
-  air_quality: "Kualitas Udara",
-  co2_in: "CO₂ Dalam Ruangan",
-  co2_out: "CO₂ Luar Ruangan",
-  humidity: "Kelembapan",
-  brightness: "Kecerahan LED",
-  fan_speed: "Kecepatan Fan",
-  status: "Status Tanaman",
+  plant_status: "Status Tanaman",
+  vision_conf: "Confidence AI",
+  soil_moisture: "Kelembapan Tanah",
+  soil_raw: "Soil Raw",
+  mq135_1: "MQ-135 #1",
+  mq135_2: "MQ-135 #2",
+  pm1: "PM1.0",
+  pm25: "PM2.5",
+  pm10: "PM10",
+  pump: "Pompa",
+  fan: "Kecepatan Fan",
+  led: "Kecerahan LED",
 };
 
 export const SENSOR_DESCRIPTIONS: Record<SensorFieldKey, string> = {
-  air_quality: "Pembacaan sensor kualitas udara di sekitar perangkat.",
-  co2_in:
-    "Kadar CO₂ di dalam ruangan. Di bawah 1.000 ppm masih nyaman; makin tinggi, makin pengap.",
-  co2_out:
-    "Kadar CO₂ di luar ruangan sebagai pembanding. Udara luar yang normal sekitar 420 ppm.",
-  humidity:
-    "Kelembapan udara di sekitar lumut. Lumut paling nyaman di kisaran 70–90%.",
-  brightness: "Tingkat kecerahan lampu LED yang menyinari lumut.",
-  fan_speed: "Kecepatan kipas yang mengalirkan udara melewati lumut.",
-  status: "Kondisi lumut terbaru yang dilaporkan perangkat.",
+  plant_status: "Hasil klasifikasi AI: 0 = Sehat, 1 = Sakit, 2 = Mati.",
+  vision_conf: "Skor keyakinan AI terhadap klasifikasi tanaman (0–1).",
+  soil_moisture: "Kelembapan tanah dalam persentase. Lumut nyaman di 70–90%.",
+  soil_raw: "Nilai mentah sensor kelembapan tanah (ADC).",
+  mq135_1: "Pembacaan sensor gas MQ-135 pertama (kualitas udara).",
+  mq135_2: "Pembacaan sensor gas MQ-135 kedua (redundan).",
+  pm1: "Partikel udara < 1 µm (PM1.0).",
+  pm25: "Partikel udara < 2.5 µm (PM2.5), paling berbahaya bagi paru-paru.",
+  pm10: "Partikel udara < 10 µm (PM10).",
+  pump: "Status pompa air: menyala atau mati.",
+  fan: "Kecepatan kipas dalam persentase (0–100).",
+  led: "Kecerahan lampu LED dalam persentase (0–100).",
 };
 
 export const SENSOR_UNITS: Partial<Record<SensorFieldKey, string>> = {
-  co2_in: "ppm",
-  co2_out: "ppm",
-  humidity: "%",
+  soil_moisture: "%",
+  fan: "%",
+  led: "%",
 };
 
 const numberFormatter = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 1,
 });
 
+/** confidence AI butuh 2 angka desimal (0,95 jangan dibulatkan jadi 1). */
+const confidenceFormatter = new Intl.NumberFormat("id-ID", {
+  maximumFractionDigits: 2,
+});
+
 /** Ambil nilai mentah satu kolom dari sebuah baris. */
 export function readingValue(
-  reading: SensorReading | null | undefined,
+  reading: PublicSensorReading | SensorReading | null | undefined,
   key: SensorFieldKey,
-): number | string | null {
+): number | boolean | null {
   if (!reading) return null;
-  if (key === "status") return reading.status;
   return reading[key];
 }
 
-/** Ambil nilai numerik untuk grafik (null kalau kosong / bukan angka). */
+/** Ambil nilai numerik untuk grafik (boolean → 0/1). */
 export function historyValues(
-  readings: SensorReading[],
+  readings: Array<PublicSensorReading | SensorReading>,
   key: SensorFieldKey,
 ): Array<number | null> {
-  if (key === "status") return readings.map(() => null);
   return readings.map((reading) => {
     const value = reading[key];
+    if (typeof value === "boolean") return value ? 1 : 0;
     return typeof value === "number" && Number.isFinite(value) ? value : null;
   });
 }
 
-/** Format tampilan nilai (angka + satuan, atau teks status tanaman apa adanya). */
+/** Format tampilan nilai (angka + satuan, teks status, atau boolean). */
 export function formatSensorValue(
-  value: number | string | null | undefined,
+  value: number | boolean | null | undefined,
   key: SensorFieldKey,
 ): string {
-  if (value === null || value === undefined || value === "") return "—";
-  if (key === "status") return formatPlantStatus(String(value));
+  if (value === null || value === undefined) return "—";
+
+  if (key === "plant_status") {
+    return plantStatusText(typeof value === "boolean" ? Number(value) : value);
+  }
+  if (key === "pump" || typeof value === "boolean") {
+    return value ? "Menyala" : "Mati";
+  }
 
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) return String(value);
 
+  const formatter = key === "vision_conf" ? confidenceFormatter : numberFormatter;
   const unit = SENSOR_UNITS[key];
   return unit
-    ? `${numberFormatter.format(numeric)} ${unit}`
-    : numberFormatter.format(numeric);
+    ? `${formatter.format(numeric)} ${unit}`
+    : formatter.format(numeric);
 }
+
+/** Versi aman untuk browser — tanpa `device_id` internal. */
+export type PublicSensorReading = Omit<SensorReading, "device_id">;
 
 /** Sumber pembacaan terakhir pada endpoint cache. */
 export type LatestReadingSource = "redis" | "supabase" | "none";
 
 /** Respons `GET /api/readings/latest`. */
 export type LatestReadingResponse = {
-  reading: SensorReading | null;
+  reading: PublicSensorReading | null;
+  macAddress: string | null;
   source: LatestReadingSource;
-  /** Epoch ms kapan data ini terakhir ditulis ke cache (null kalau tidak ada). */
   cachedAt: number | null;
 };

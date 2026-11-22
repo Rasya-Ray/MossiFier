@@ -1,25 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import {
   readCachedReadings,
   writeCachedReadings,
 } from "@/lib/readings-cache";
-import {
-  SENSOR_COLUMNS,
-  type LatestReadingResponse,
-  type SensorReading,
-} from "@/lib/sensors";
+import type { LatestReadingResponse, PublicSensorReading } from "@/lib/sensors";
 import { useDevice } from "@/components/device/device-provider";
 
 /** Jumlah baris riwayat yang disimpan untuk grafik. */
 export const HISTORY_LIMIT = 20;
 
+/**
+ * Tabel `sensor_readings` memakai RLS tanpa policy anon, jadi browser tidak
+ * bisa query langsung / berlangganan Realtime. Dashboard memakai API server
+ * (service role). Supaya data tetap segar tanpa refresh, riwayat ditarik
+ * berkala dari `/api/readings/history`.
+ */
+const POLL_INTERVAL_MS = 10_000;
+
 export type SensorLiveState = {
   /** Urut lama → baru (baris terakhir = paling baru). */
-  readings: SensorReading[];
-  latest: SensorReading | null;
+  readings: PublicSensorReading[];
+  latest: PublicSensorReading | null;
   isFetching: boolean;
   lastUpdated: number | null;
   error: string | null;
@@ -38,73 +41,56 @@ const EMPTY_STATUS: DeviceStatus = {
   lastUpdated: null,
 };
 
-/** Nama channel harus unik per instance hook di satu client. */
-let channelSeq = 0;
-
-/** Query riwayat terakhir untuk grafik. */
+/** Query riwayat terakhir untuk grafik (lewat API server). */
 async function loadReadings(
-  deviceId: string,
+  macAddress: string,
   limit: number,
-): Promise<SensorReading[]> {
-  const { data, error } = await supabase
-    .from("devices")
-    .select(SENSOR_COLUMNS)
-    .eq("device_id", deviceId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) throw error;
-  return ((data ?? []) as SensorReading[]).slice().reverse();
+): Promise<PublicSensorReading[]> {
+  const response = await fetch(
+    `/api/readings/history?macAddress=${encodeURIComponent(macAddress)}&limit=${limit}`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) throw new Error("history unavailable");
+  const result = (await response.json()) as {
+    readings: PublicSensorReading[];
+  };
+  return result.readings ?? [];
 }
 
-function readingTime(reading: SensorReading): number {
+function readingTime(reading: { created_at: string }): number {
   const time = Date.parse(reading.created_at);
   return Number.isFinite(time) ? time : 0;
 }
 
 /** Gabung + dedupe berdasarkan `id`, urut lama → baru, simpan `limit` terakhir. */
 function mergeReadings(
-  current: SensorReading[],
-  incoming: SensorReading[],
+  current: PublicSensorReading[],
+  incoming: PublicSensorReading[],
   limit: number,
-): SensorReading[] {
-  const byId = new Map<string, SensorReading>();
-
+): PublicSensorReading[] {
+  const byId = new Map<string, PublicSensorReading>();
   for (const row of current) byId.set(row.id, row);
   for (const row of incoming) byId.set(row.id, row);
-
   return [...byId.values()]
     .sort((a, b) => readingTime(a) - readingTime(b))
     .slice(-limit);
 }
 
-function postLatestToRedis(reading: SensorReading): void {
-  void fetch("/api/readings/latest", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(reading),
-    cache: "no-store",
-  }).catch(() => {
-    // Redis akan tetap dicoba lagi saat GET/cache-miss atau INSERT berikutnya.
-  });
-}
-
 /**
- * Data sensor device aktif:
+ * Data sensor device aktif (MAC):
  * 1. Tampilkan cache browser jika ada.
- * 2. Ambil satu pembacaan terakhir melalui API (Redis-first) agar nilai utama
- *    langsung muncul setelah login / saat perangkat sedang offline.
- * 3. Ambil 20 baris Supabase hanya untuk grafik, lalu dengarkan Realtime INSERT.
- * 4. Sinkronkan pembacaan terbaru ke Redis melalui server (kredensial tidak ke browser).
+ * 2. Ambil satu pembacaan terakhir melalui API (Redis-first).
+ * 3. Ambil 20 baris riwayat lewat API server untuk grafik.
+ * 4. Polling ringan tiap 10 detik (RLS tidak mengizinkan Realtime di browser).
  */
 export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
   const { deviceId } = useDevice();
 
   const [rowsByDevice, setRowsByDevice] = useState<
-    Record<string, SensorReading[]>
+    Record<string, PublicSensorReading[]>
   >({});
   const [latestByDevice, setLatestByDevice] = useState<
-    Record<string, SensorReading>
+    Record<string, PublicSensorReading>
   >({});
   const [statusByDevice, setStatusByDevice] = useState<
     Record<string, DeviceStatus>
@@ -116,15 +102,15 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
   const mounted = useRef(true);
   const inFlight = useRef(false);
   const requestSeq = useRef(0);
-  const rowsRef = useRef<Record<string, SensorReading[]>>({});
-  const latestRef = useRef<Record<string, SensorReading>>({});
+  const rowsRef = useRef<Record<string, PublicSensorReading[]>>({});
+  const latestRef = useRef<Record<string, PublicSensorReading>>({});
 
-  const commit = useCallback((id: string, next: SensorReading[]) => {
+  const commit = useCallback((id: string, next: PublicSensorReading[]) => {
     rowsRef.current[id] = next;
     setRowsByDevice((prev) => ({ ...prev, [id]: next }));
   }, []);
 
-  const updateLatest = useCallback((id: string, next: SensorReading) => {
+  const updateLatest = useCallback((id: string, next: PublicSensorReading) => {
     const current =
       latestRef.current[id] ??
       rowsRef.current[id]?.at(-1) ??
@@ -146,61 +132,61 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
     [],
   );
 
-  const load = useCallback(() => {
-    if (!deviceId) return;
+  const load = useCallback(
+    (silent: boolean) => {
+      if (!deviceId) return;
 
-    const requested = deviceId;
-    const requestId = ++requestSeq.current;
-    inFlight.current = true;
+      const requested = deviceId;
+      const requestId = ++requestSeq.current;
+      if (!silent) inFlight.current = true;
 
-    void loadReadings(requested, limit)
-      .then((rows) => {
-        if (!mounted.current || requestId !== requestSeq.current) return;
+      void loadReadings(requested, limit)
+        .then((rows) => {
+          if (!mounted.current || requestId !== requestSeq.current) return;
 
-        const current =
-          rowsRef.current[requested] ??
-          readCachedReadings(requested)?.readings ??
-          [];
-        const merged = mergeReadings(current, rows, limit);
+          const current =
+            rowsRef.current[requested] ??
+            readCachedReadings(requested)?.readings ??
+            [];
+          const merged = mergeReadings(current, rows, limit);
 
-        commit(requested, merged);
-        writeCachedReadings(requested, merged);
+          commit(requested, merged);
+          writeCachedReadings(requested, merged);
 
-        const newest = rows.at(-1);
-        if (newest) {
-          updateLatest(requested, newest);
-          postLatestToRedis(newest);
-        }
+          const newest = rows.at(-1);
+          if (newest) updateLatest(requested, newest);
 
-        patchStatus(requested, {
-          ready: true,
-          error: null,
-          lastUpdated: Date.now(),
+          patchStatus(requested, {
+            ready: true,
+            error: null,
+            lastUpdated: Date.now(),
+          });
+        })
+        .catch(() => {
+          if (!mounted.current || requestId !== requestSeq.current) return;
+          patchStatus(requested, {
+            ready: true,
+            error:
+              "Data sensor belum bisa dimuat. Menampilkan data terakhir tersimpan.",
+          });
+        })
+        .finally(() => {
+          if (requestId === requestSeq.current) inFlight.current = false;
         });
-      })
-      .catch(() => {
-        if (!mounted.current || requestId !== requestSeq.current) return;
-        patchStatus(requested, {
-          ready: true,
-          error: "Koneksi Supabase terputus. Menampilkan data terakhir tersimpan.",
-        });
-      })
-      .finally(() => {
-        if (requestId === requestSeq.current) inFlight.current = false;
-      });
-  }, [commit, deviceId, limit, patchStatus, updateLatest]);
+    },
+    [commit, deviceId, limit, patchStatus, updateLatest],
+  );
 
   const refresh = useCallback(() => {
     if (!deviceId || inFlight.current) return;
     patchStatus(deviceId, { ready: false });
-    load();
+    load(false);
   }, [deviceId, load, patchStatus]);
 
   /*
    * localStorage tidak tersedia di server. Kalau cache dibaca langsung saat
    * render, server menghasilkan skeleton sementara client langsung menampilkan
-   * data → HTML tidak cocok dan React melempar hydration error. Cache dibaca
-   * di sini (setelah mount), jadi render pertama server & client identik.
+   * data → hydration mismatch. Cache dibaca setelah mount.
    */
   useEffect(() => {
     if (!deviceId) return;
@@ -210,11 +196,7 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
 
     commit(
       deviceId,
-      mergeReadings(
-        rowsRef.current[deviceId] ?? [],
-        cached.readings,
-        limit,
-      ),
+      mergeReadings(rowsRef.current[deviceId] ?? [], cached.readings, limit),
     );
     updateLatest(deviceId, newest);
     setCachedAtByDevice((prev) => ({ ...prev, [deviceId]: cached.savedAt }));
@@ -224,10 +206,9 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
     mounted.current = true;
     if (!deviceId) return;
 
-    // Read the single latest row from Redis first; on a cache miss the API
-    // initializes it from one Supabase row. This is independent of chart history.
+    // Baca satu pembacaan terakhir dari Redis dulu (cepat), lalu riwayat.
     void fetch(
-      `/api/readings/latest?deviceId=${encodeURIComponent(deviceId)}`,
+      `/api/readings/latest?macAddress=${encodeURIComponent(deviceId)}`,
       { cache: "no-store" },
     )
       .then(async (response) => {
@@ -244,61 +225,18 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
         });
       })
       .catch(() => {
-        if (mounted.current) {
-          patchStatus(deviceId, {
-            ready: true,
-            error: "Cache terakhir belum tersedia; mencoba mengambil data sensor.",
-          });
-        }
+        // Riwayat di bawah tetap dicoba; error ditampilkan oleh `load`.
       });
 
-    // History is used only by trend charts; main values already load from Redis.
-    load();
+    load(false);
 
-    channelSeq += 1;
-    const channel = supabase
-      .channel(`devices-live-${channelSeq}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "devices",
-          filter: `device_id=eq.${deviceId}`,
-        },
-        (payload) => {
-          const row = payload.new as SensorReading;
-          if (!row?.id || row.device_id !== deviceId) return;
-
-          const current =
-            rowsRef.current[deviceId] ??
-            readCachedReadings(deviceId)?.readings ??
-            [];
-          const next = mergeReadings(current, [row], limit);
-          commit(deviceId, next);
-          writeCachedReadings(deviceId, next);
-          updateLatest(deviceId, row);
-          postLatestToRedis(row);
-          patchStatus(deviceId, {
-            ready: true,
-            error: null,
-            lastUpdated: Date.now(),
-          });
-        },
-      )
-      .subscribe((status) => {
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          patchStatus(deviceId, {
-            error: "Realtime Supabase terputus, mencoba menyambung ulang…",
-          });
-        }
-      });
+    const timer = window.setInterval(() => load(true), POLL_INTERVAL_MS);
 
     return () => {
       mounted.current = false;
-      void supabase.removeChannel(channel);
+      window.clearInterval(timer);
     };
-  }, [commit, deviceId, limit, load, patchStatus, updateLatest]);
+  }, [deviceId, load, limit, patchStatus, updateLatest]);
 
   const readings = deviceId ? (rowsByDevice[deviceId] ?? []) : [];
   const latest = deviceId

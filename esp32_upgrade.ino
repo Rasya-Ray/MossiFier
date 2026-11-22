@@ -1,8 +1,14 @@
 /*
- * ESP32 — Mossifier sensor publisher
- * POST satu baris sensor ke Supabase REST (/rest/v1/devices).
- * Dashboard membaca lewat Realtime INSERT, jadi tidak perlu polling dari client.
+ * ESP32 — Mossifier sensor publisher (schema device baru)
+ *
+ * 1. setup()  → panggil RPC register_device(p_mac) supaya baris devices ada.
+ * 2. loop()   → panggil RPC insert_sensor(...) tiap interval.
+ *
+ * Semua akses lewat RPC security definer + RLS: firmware cukup memakai
+ * publishable key. JANGAN pernah taruh DATABASE_URL / service_role key di sini.
+ *
  * Kompatibel Arduino IDE 1.8.3+ (library bawaan: WiFi, HTTPClient).
+ * Kalau nama parameter RPC di SQL-mu berbeda, sesuaikan blok JSON di bawah.
  */
 
 #include <WiFi.h>
@@ -14,20 +20,18 @@ const char* password = "YOUR_WIFI_PASSWORD";
 
 // === SUPABASE ===
 // Sama dengan NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY di .env.
-// URL tanpa /rest/v1 — path itu ditambahkan di bawah.
-// Publishable/anon key AMAN ditanam di firmware yang akan dipublisikan;
-// aksesnya dibatasi RLS. JANGAN pernah taruh DATABASE_URL atau service_role key di sini.
 const char* supabaseUrl = "https://ujnwgtdvwguebwxnorut.supabase.co";
 const char* supabaseKey = "sb_publishable_Z8m_9Kld6vLzO-dsVH5SHQ_ctsCVZXH";
 
-// === DEVICE IDENTIFIER ===
-// Harus sama persis dengan device_id yang diisi di sidebar dashboard,
-// kalau tidak data tidak akan muncul (dashboard memfilter per device).
-String deviceId = "MOSS-ESP32-001";
+// === IDENTITAS DEVICE ===
+// MAC 12 hex huruf besar, TANPA titik dua. Sama dengan MAC yang dimasukkan
+// di dashboard (sidebar → Tambah/Ganti device) dan .env DEVICE_MAC.
+const char* deviceMac = "B0A7322B0960";
 
-// Interval kirim ESP32. Boleh diperlambat kalau tidak butuh data terlalu rapat.
+// Interval kirim sensor. Dashboard memuat ulang data tiap ~10 detik.
 const unsigned long sendInterval = 7500;
 unsigned long lastSend = 0;
+bool deviceRegistered = false;
 
 void setup() {
   Serial.begin(115200);
@@ -42,12 +46,25 @@ void setup() {
   Serial.println("\nWiFi connected!");
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
+
+  registerDevice();
 }
 
 void loop() {
+  if (!pastikanWifi()) return;
+
+  // Kalau register gagal (sinyal lemah / DB sibuk), coba lagi sebelum kirim.
+  if (!deviceRegistered) {
+    registerDevice();
+    if (!deviceRegistered) {
+      delay(2000);
+      return;
+    }
+  }
+
   if (millis() - lastSend >= sendInterval) {
     lastSend = millis();
-    kirimKeSupabase();
+    kirimSensor();
   }
 }
 
@@ -71,53 +88,83 @@ bool pastikanWifi() {
   return true;
 }
 
-void kirimKeSupabase() {
+void siapkanHeader(HTTPClient& http) {
+  http.setTimeout(10000);
+  http.addHeader("apikey", supabaseKey);
+  // String(...) penting — "Bearer " + const char* itu pointer arithmetic di C++.
+  http.addHeader("Authorization", String("Bearer ") + supabaseKey);
+  http.addHeader("Content-Type", "application/json");
+}
+
+/** RPC register_device(p_mac TEXT) — idempotent, aman dipanggil berulang. */
+void registerDevice() {
   if (!pastikanWifi()) return;
 
   HTTPClient http;
+  http.begin(String(supabaseUrl) + "/rest/v1/rpc/register_device");
+  siapkanHeader(http);
 
-  // Tidak mengirim `id`: devices.id punya default gen_random_uuid() di database.
-  // Status dikirim sebagai teks langsung (bukan kode angka), misalnya "Sehat".
-  // Ganti nilai di bawah dengan hasil klasifikasi kondisi lumut yang sebenarnya.
-  String plantStatus = "Sehat";
-  String jsonData = "{\"device_id\":\"" + deviceId + "\",";
-  jsonData += "\"status\":\"" + plantStatus + "\",";
-  jsonData += "\"air_quality\":" + String(random(0, 500)) + ",";
-  jsonData += "\"co2_in\":" + String(random(400, 2000)) + ",";
-  jsonData += "\"co2_out\":" + String(random(400, 2000)) + ",";
-  jsonData += "\"humidity\":" + String(random(30, 80)) + ",";
-  jsonData += "\"brightness\":" + String(random(0, 1000)) + ",";
-  jsonData += "\"fan_speed\":" + String(random(0, 100)) + "}";
+  String body = "{\"p_mac\":\"" + String(deviceMac) + "\"}";
+  int code = http.POST(body);
+  String payload = http.getString();
 
-  Serial.print("Mengirim ke Supabase: ");
-  Serial.println(jsonData);
-
-  http.begin(String(supabaseUrl) + "/rest/v1/devices");
-  http.setTimeout(10000);
-  http.addHeader("apikey", supabaseKey);
-  // Perhatikan String(...) — "Bearer " + const char* itu pointer arithmetic di C++.
-  http.addHeader("Authorization", String("Bearer ") + supabaseKey);
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Prefer", "return=minimal");
-
-  int httpCode = http.POST(jsonData);
-
-  if (httpCode > 0) {
-    String payload = http.getString();
-    Serial.printf("HTTP code: %d\nResponse: %s\n", httpCode, payload.c_str());
-    if (httpCode == 201) {
-      Serial.println("Data berhasil disimpan ke tabel devices.");
-    } else {
-      Serial.println("Pengiriman ditolak — cek RLS/key/format payload.");
-    }
+  if (code >= 200 && code < 300) {
+    deviceRegistered = true;
+    Serial.println("Device terdaftar: " + String(deviceMac));
   } else {
-    Serial.print("Error HTTP request: ");
-    Serial.println(http.errorToString(httpCode));
+    Serial.printf("register_device gagal (%d): %s\n", code, payload.c_str());
   }
-
   http.end();
+}
 
-  Serial.print("Kirim berikutnya dalam ");
-  Serial.print(sendInterval / 1000);
-  Serial.println(" detik.");
+/** RPC insert_sensor(...) — satu baris = satu kiriman (riwayat). */
+void kirimSensor() {
+  HTTPClient http;
+  http.begin(String(supabaseUrl) + "/rest/v1/rpc/insert_sensor");
+  siapkanHeader(http);
+
+  // === CONTOH NILAI ===
+  // Ganti bagian ini dengan pembacaan sensor / hasil klasifikasi aslimu.
+  int plantStatus = random(0, 3);                 // 0=Sehat, 1=Sakit, 2=Mati
+  float visionConf = random(70, 100) / 100.0;     // 0..1
+  float soilMoisture = random(60, 96);            // persen
+  int soilRaw = random(0, 4096);                  // ADC
+  int mq1 = random(0, 500);
+  int mq2 = random(0, 500);
+  int pm1 = random(0, 80);
+  int pm25 = random(0, 150);
+  int pm10 = random(0, 250);
+  bool pump = random(0, 2) == 1;
+  float fan = random(0, 101);                     // persen 0..100
+  float led = random(0, 101);                     // persen 0..100
+
+  String body = "{";
+  body += "\"p_mac\":\"" + String(deviceMac) + "\",";
+  body += "\"p_plant_status\":" + String(plantStatus) + ",";
+  body += "\"p_vision_conf\":" + String(visionConf, 2) + ",";
+  body += "\"p_soil_moisture\":" + String(soilMoisture, 1) + ",";
+  body += "\"p_soil_raw\":" + String(soilRaw) + ",";
+  body += "\"p_mq135_1\":" + String(mq1) + ",";
+  body += "\"p_mq135_2\":" + String(mq2) + ",";
+  body += "\"p_pm1\":" + String(pm1) + ",";
+  body += "\"p_pm25\":" + String(pm25) + ",";
+  body += "\"p_pm10\":" + String(pm10) + ",";
+  body += "\"p_pump\":" + String(pump ? "true" : "false") + ",";
+  body += "\"p_fan\":" + String(fan, 1) + ",";
+  body += "\"p_led\":" + String(led, 1);
+  body += "}";
+
+  int code = http.POST(body);
+  String payload = http.getString();
+
+  if (code >= 200 && code < 300) {
+    Serial.println("Sensor terkirim.");
+  } else {
+    Serial.printf("insert_sensor gagal (%d): %s\n", code, payload.c_str());
+    // 404 di sini biasanya berarti parameter RPC belum cocok — cek SQL.
+    if (code == 404 || code == 400) {
+      Serial.println("Body: " + body);
+    }
+  }
+  http.end();
 }

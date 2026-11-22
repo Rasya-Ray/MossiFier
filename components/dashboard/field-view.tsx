@@ -35,7 +35,7 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
   const title = SENSOR_LABELS[sensorKey];
   const description = SENSOR_DESCRIPTIONS[sensorKey];
   const latest = readingValue(live.latest, sensorKey);
-  const isStatus = sensorKey === "status";
+  const isStatus = sensorKey === "plant_status";
 
   const readings = [...live.readings].reverse().slice(0, 6);
 

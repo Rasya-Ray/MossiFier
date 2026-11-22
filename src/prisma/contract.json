@@ -8,6 +8,10 @@
       "model": "Device",
       "namespace": "public"
     },
+    "sensor_readings": {
+      "model": "SensorReading",
+      "namespace": "public"
+    },
     "users": {
       "model": "User",
       "namespace": "public"
@@ -19,34 +23,100 @@
         "models": {
           "Device": {
             "fields": {
-              "air_quality": {
+              "claimed_at": {
                 "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-date@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "created_at": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-date@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "id": {
+                "nullable": false,
                 "type": {
                   "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
               },
-              "brightness": {
-                "nullable": true,
+              "mac_address": {
+                "nullable": false,
                 "type": {
-                  "codecId": "pg/int4@1",
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
-              "co2_in": {
+              "name": {
                 "nullable": true,
                 "type": {
-                  "codecId": "pg/int4@1",
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
-              "co2_out": {
+              "user_id": {
                 "nullable": true,
                 "type": {
-                  "codecId": "pg/int4@1",
+                  "codecId": "pg/uuid@1",
                   "kind": "scalar"
                 }
+              }
+            },
+            "relations": {
+              "owner": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "user_id"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "claimed_at": {
+                  "column": "claimed_at"
+                },
+                "created_at": {
+                  "column": "created_at"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "mac_address": {
+                  "column": "mac_address"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "user_id": {
+                  "column": "user_id"
+                }
               },
+              "namespaceId": "public",
+              "table": "devices"
+            }
+          },
+          "SensorReading": {
+            "fields": {
               "created_at": {
                 "nullable": false,
                 "type": {
@@ -60,21 +130,14 @@
               "device_id": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                }
-              },
-              "fan_speed": {
-                "nullable": true,
-                "type": {
                   "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
               },
-              "humidity": {
+              "fan": {
                 "nullable": true,
                 "type": {
-                  "codecId": "pg/int4@1",
+                  "codecId": "pg/float4@1",
                   "kind": "scalar"
                 }
               },
@@ -85,50 +148,142 @@
                   "kind": "scalar"
                 }
               },
-              "status": {
+              "led": {
                 "nullable": true,
                 "type": {
-                  "codecId": "pg/text@1",
+                  "codecId": "pg/float4@1",
+                  "kind": "scalar"
+                }
+              },
+              "mq135_1": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "mq135_2": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "plant_status": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "pm1": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "pm25": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "pump": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "soil_moisture": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/float4@1",
+                  "kind": "scalar"
+                }
+              },
+              "soil_raw": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "vision_conf": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/float4@1",
                   "kind": "scalar"
                 }
               }
             },
-            "relations": {},
+            "relations": {
+              "device": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "device_id"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Device",
+                  "namespace": "public"
+                }
+              }
+            },
             "storage": {
               "fields": {
-                "air_quality": {
-                  "column": "air_quality"
-                },
-                "brightness": {
-                  "column": "brightness"
-                },
-                "co2_in": {
-                  "column": "co2_in"
-                },
-                "co2_out": {
-                  "column": "co2_out"
-                },
                 "created_at": {
                   "column": "created_at"
                 },
                 "device_id": {
                   "column": "device_id"
                 },
-                "fan_speed": {
-                  "column": "fan_speed"
-                },
-                "humidity": {
-                  "column": "humidity"
+                "fan": {
+                  "column": "fan"
                 },
                 "id": {
                   "column": "id"
                 },
-                "status": {
-                  "column": "status"
+                "led": {
+                  "column": "led"
+                },
+                "mq135_1": {
+                  "column": "mq135_1"
+                },
+                "mq135_2": {
+                  "column": "mq135_2"
+                },
+                "plant_status": {
+                  "column": "plant_status"
+                },
+                "pm1": {
+                  "column": "pm1"
+                },
+                "pm25": {
+                  "column": "pm25"
+                },
+                "pump": {
+                  "column": "pump"
+                },
+                "soil_moisture": {
+                  "column": "soil_moisture"
+                },
+                "soil_raw": {
+                  "column": "soil_raw"
+                },
+                "vision_conf": {
+                  "column": "vision_conf"
                 }
               },
               "namespaceId": "public",
-              "table": "devices"
+              "table": "sensor_readings"
             }
           },
           "User": {
@@ -203,63 +358,28 @@
     "namespaces": {
       "public": {
         "entries": {
-          "policy": {
-            "anon_insert_devices": {
-              "kind": "policy",
-              "name": "anon_insert_devices_01268aef",
-              "namespaceId": "public",
-              "operation": "insert",
-              "permissive": true,
-              "prefix": "anon_insert_devices",
-              "roles": [
-                "anon"
-              ],
-              "tableName": "devices",
-              "withCheck": "true"
-            },
-            "anon_read_devices": {
-              "kind": "policy",
-              "name": "anon_read_devices_16dd15e0",
-              "namespaceId": "public",
-              "operation": "select",
-              "permissive": true,
-              "prefix": "anon_read_devices",
-              "roles": [
-                "anon"
-              ],
-              "tableName": "devices",
-              "using": "true"
-            }
-          },
           "rls": {
             "devices": {
               "kind": "rls",
               "namespaceId": "public",
               "tableName": "devices"
+            },
+            "sensor_readings": {
+              "kind": "rls",
+              "namespaceId": "public",
+              "tableName": "sensor_readings"
             }
           },
           "table": {
             "devices": {
               "columns": {
-                "air_quality": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
-                  "nullable": true
-                },
-                "brightness": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
-                  "nullable": true
-                },
-                "co2_in": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
-                  "nullable": true
-                },
-                "co2_out": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
-                  "nullable": true
+                "claimed_at": {
+                  "codecId": "pg/timestamptz-date@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
                 },
                 "created_at": {
                   "codecId": "pg/timestamptz-date@1",
@@ -273,19 +393,97 @@
                     "precision": 3
                   }
                 },
-                "device_id": {
+                "id": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nullable": false
+                },
+                "mac_address": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
                   "nullable": false
                 },
-                "fan_speed": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
+                "name": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
-                "humidity": {
+                "user_id": {
+                  "codecId": "pg/uuid@1",
+                  "dataType": "pg/uuid",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "devices_owner_6c952402"
+                  },
+                  "source": {
+                    "columns": [
+                      "user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "devices"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "user_id"
+                  ],
+                  "name": "devices_owner_6c952402",
+                  "prefix": "devices_owner",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "mac_address"
+                  ]
+                }
+              ]
+            },
+            "sensor_readings": {
+              "columns": {
+                "created_at": {
+                  "codecId": "pg/timestamptz-date@1",
+                  "dataType": "pg/timestamptz",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "device_id": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
+                  "nullable": false
+                },
+                "fan": {
+                  "codecId": "pg/float4@1",
+                  "dataType": "pg/float4",
                   "nullable": true
                 },
                 "id": {
@@ -297,14 +495,97 @@
                   },
                   "nullable": false
                 },
-                "status": {
-                  "codecId": "pg/text@1",
-                  "dataType": "pg/text",
+                "led": {
+                  "codecId": "pg/float4@1",
+                  "dataType": "pg/float4",
+                  "nullable": true
+                },
+                "mq135_1": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
+                "mq135_2": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
+                "plant_status": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
+                "pm1": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
+                "pm25": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
+                "pump": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "nullable": true
+                },
+                "soil_moisture": {
+                  "codecId": "pg/float4@1",
+                  "dataType": "pg/float4",
+                  "nullable": true
+                },
+                "soil_raw": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
+                "vision_conf": {
+                  "codecId": "pg/float4@1",
+                  "dataType": "pg/float4",
                   "nullable": true
                 }
               },
-              "foreignKeys": [],
-              "indexes": [],
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "sensor_readings_device_id_idx_8f329912"
+                  },
+                  "source": {
+                    "columns": [
+                      "device_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "sensor_readings"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "devices"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "device_id",
+                    "created_at"
+                  ],
+                  "name": "sensor_readings_device_desc_722ed4f4",
+                  "prefix": "sensor_readings_device_desc",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "device_id"
+                  ],
+                  "name": "sensor_readings_device_id_idx_8f329912",
+                  "prefix": "sensor_readings_device_id_idx",
+                  "unique": false
+                }
+              ],
               "primaryKey": {
                 "columns": [
                   "id"
@@ -368,10 +649,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "702fc1c6b6ee340a8c94eaec7e7cf0df2bc0423d3cd38e7dd287701bf5f6c18f"
+    "storageHash": "fe43837330fe408658522dabd6da80d4ab8293c372f01cc6bd722e6c82d2825c"
   },
   "execution": {
-    "executionHash": "4397132f1fa08a837984376c5ce2daa95842386f70757a2a9c3b597ff2cc24d1",
+    "executionHash": "34fdceafe2648e6ebaf0c7f68828f0aa9e5f075078373d0aef4f67d33e745fdf",
     "mutations": {
       "defaults": [
         {
@@ -390,11 +671,25 @@
         },
         {
           "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator",
+            "params": {
+              "precision": 3
+            }
+          },
+          "ref": {
+            "entry": "sensor_readings",
+            "field": "created_at",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
             "id": "uuidv7",
             "kind": "generator"
           },
           "ref": {
-            "entry": "devices",
+            "entry": "sensor_readings",
             "field": "id",
             "namespace": "public"
           }

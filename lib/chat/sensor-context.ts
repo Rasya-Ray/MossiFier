@@ -1,24 +1,19 @@
-import { createClient } from "@supabase/supabase-js";
+import type { SessionUser } from "@/lib/auth/types";
+import { findDeviceForUser } from "@/lib/device-access";
 import {
   SENSOR_COLUMNS,
   SENSOR_KEYS,
   SENSOR_LABELS,
-  SENSOR_UNITS,
+  formatSensorValue,
   type SensorKey,
   type SensorReading,
 } from "@/lib/sensors";
+import { getAdminClient } from "@/lib/supabase-admin";
 
 /** Jumlah baris terakhir yang diringkas untuk chatbot. */
 const CONTEXT_ROWS = 20;
 /** Lewat dari ini, data dianggap terlambat (perangkat mungkin offline). */
 const STALE_AFTER_MS = 10 * 60 * 1000;
-
-/** Format ID device dari ESP32, mis. MOSS-ESP32-001. Cegah input aneh. */
-const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
-
-export function isValidDeviceId(value: unknown): value is string {
-  return typeof value === "string" && DEVICE_ID_PATTERN.test(value);
-}
 
 const dateTime = new Intl.DateTimeFormat("id-ID", {
   timeZone: "Asia/Jakarta",
@@ -38,21 +33,8 @@ const shortDateTime = new Intl.DateTimeFormat("id-ID", {
   minute: "2-digit",
 });
 
-const num = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 });
-
-function withUnit(key: SensorKey, value: number): string {
-  const unit = SENSOR_UNITS[key];
-  return unit ? `${num.format(value)} ${unit}` : num.format(value);
-}
-
-/** Status dari perangkat = teks bebas → bersihkan agar tidak jadi celah injeksi. */
-function cleanStatus(value: string | null): string {
-  const text = (value ?? "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 40);
-  return text || "tidak ada";
-}
-
 function minutesAgo(from: number, to: number): string {
-  const minutes = Math.max(0, Math.round((to - from) / 60000));
+  const minutes = Math.max(0, Math.round((to - from) / 60_000));
   if (minutes < 1) return "baru saja";
   if (minutes < 60) return `${minutes} menit lalu`;
   const hours = Math.round(minutes / 60);
@@ -75,16 +57,9 @@ function trend(values: number[]): string {
 }
 
 /** Ambil riwayat terakhir satu device langsung dari Supabase (server-side). */
-async function fetchReadings(deviceId: string): Promise<SensorReading[]> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) throw new Error("Supabase env belum diisi");
-
-  const supabase = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const { data, error } = await supabase
-    .from("devices")
+async function fetchReadings(deviceId: number): Promise<SensorReading[]> {
+  const { data, error } = await getAdminClient()
+    .from("sensor_readings")
     .select(SENSOR_COLUMNS)
     .eq("device_id", deviceId)
     .order("created_at", { ascending: false })
@@ -94,13 +69,22 @@ async function fetchReadings(deviceId: string): Promise<SensorReading[]> {
   return ((data ?? []) as SensorReading[]).slice().reverse();
 }
 
+function formatLine(row: SensorReading, key: SensorKey): string {
+  const value = formatSensorValue(row[key], key);
+  return `- ${SENSOR_LABELS[key]}: ${value === "—" ? "tidak ada" : value}`;
+}
+
 /**
  * Susun blok "DATA SENSOR" (teks) yang disisipkan sebagai pesan sistem.
  * Tidak pernah melempar error: kegagalan dilaporkan sebagai teks supaya
  * chatbot tetap bisa menjawab pertanyaan umum.
+ *
+ * MAC divalidasi dan kepemilikan dicek dulu — pengguna tidak bisa memaksa
+ * Kibo membocorkan data device milik akun lain.
  */
 export async function buildSensorContext(
-  deviceId: string | null,
+  macAddress: string | null,
+  user: SessionUser,
 ): Promise<string> {
   const now = Date.now();
   const lines: string[] = [
@@ -108,18 +92,29 @@ export async function buildSensorContext(
     `Waktu sekarang: ${dateTime.format(now)} WIB`,
   ];
 
-  if (!deviceId) {
+  if (!macAddress) {
     lines.push(
-      "Pengguna BELUM memilih device di dashboard, jadi tidak ada data sensor. Arahkan untuk memilih lewat tombol \"Tambah device\" di sidebar.",
+      'Pengguna BELUM memilih device di dashboard, jadi tidak ada data sensor. Arahkan untuk memilih lewat tombol "Tambah/Ganti device" di sidebar.',
     );
     return lines.join("\n");
   }
 
-  lines.push(`Device aktif: ${deviceId}`);
+  const access = await findDeviceForUser(macAddress, user);
+  if (!access.ok) {
+    lines.push(
+      "Device yang dipilih tidak bisa diakses. Jangan menebak data sensor-nya; sarankan pengguna memilih device miliknya sendiri lewat sidebar.",
+    );
+    return lines.join("\n");
+  }
+
+  lines.push(`Device aktif (MAC): ${access.device.macAddress}`);
+  if (access.device.name) {
+    lines.push(`Nama device: ${access.device.name.slice(0, 60)}`);
+  }
 
   let readings: SensorReading[];
   try {
-    readings = await fetchReadings(deviceId);
+    readings = await fetchReadings(access.device.id);
   } catch (error) {
     console.error("[chat/sensor-context]", error);
     lines.push(
@@ -131,35 +126,39 @@ export async function buildSensorContext(
   const latest = readings.at(-1);
   if (!latest) {
     lines.push(
-      "Belum ada data masuk untuk device ini. Mungkin perangkat belum menyala/terhubung atau ID device salah.",
+      "Belum ada data masuk untuk device ini. Mungkin perangkat belum menyala/terhubung atau MAC salah.",
     );
     return lines.join("\n");
   }
 
   const at = new Date(latest.created_at).getTime();
-  lines.push(
-    `Pembacaan terbaru: ${shortDateTime.format(at)} WIB (${minutesAgo(at, now)})`,
-  );
-  if (now - at > STALE_AFTER_MS) {
+  if (Number.isFinite(at)) {
     lines.push(
-      "PERINGATAN: data ini sudah lama, perangkat mungkin offline. Jangan sebut sebagai kondisi saat ini tanpa menyebut ini.",
+      `Pembacaan terbaru: ${shortDateTime.format(at)} WIB (${minutesAgo(at, now)})`,
     );
+    if (now - at > STALE_AFTER_MS) {
+      lines.push(
+        "PERINGATAN: data ini sudah lama, perangkat mungkin offline. Jangan sebut sebagai kondisi saat ini tanpa menyebut ini.",
+      );
+    }
   }
 
-  lines.push(`- Status tanaman: ${cleanStatus(latest.status)}`);
   for (const key of SENSOR_KEYS) {
-    const value = latest[key];
-    lines.push(
-      `- ${SENSOR_LABELS[key]}: ${typeof value === "number" ? withUnit(key, value) : "tidak ada"}`,
-    );
+    lines.push(formatLine(latest, key));
   }
 
   if (readings.length > 1) {
     const first = new Date(readings[0].created_at).getTime();
     lines.push(
-      `Ringkasan ${readings.length} pembacaan terakhir (sejak ${shortDateTime.format(first)} WIB):`,
+      Number.isFinite(first)
+        ? `Ringkasan ${readings.length} pembacaan terakhir (sejak ${shortDateTime.format(first)} WIB):`
+        : `Ringkasan ${readings.length} pembacaan terakhir:`,
     );
-    for (const key of SENSOR_KEYS) {
+
+    const summaryKeys = SENSOR_KEYS.filter(
+      (key) => key !== "plant_status" && key !== "pump",
+    );
+    for (const key of summaryKeys) {
       const values = readings
         .map((row) => row[key])
         .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
@@ -168,9 +167,14 @@ export async function buildSensorContext(
       const max = Math.max(...values);
       const mean = values.reduce((s, v) => s + v, 0) / values.length;
       lines.push(
-        `- ${SENSOR_LABELS[key]}: min ${withUnit(key, min)}, maks ${withUnit(key, max)}, rata-rata ${withUnit(key, mean)}, tren ${trend(values)}`,
+        `- ${SENSOR_LABELS[key]}: min ${formatSensorValue(min, key)}, maks ${formatSensorValue(max, key)}, rata-rata ${formatSensorValue(mean, key)}, tren ${trend(values)}`,
       );
     }
+
+    const pumpOn = readings.filter((row) => row.pump === true).length;
+    lines.push(
+      `- Pompa: menyala ${pumpOn} dari ${readings.length} pembacaan terakhir`,
+    );
   }
 
   return lines.join("\n");

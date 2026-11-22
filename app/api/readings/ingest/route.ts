@@ -23,8 +23,8 @@ function hasValidSecret(request: Request, secret: string): boolean {
 }
 
 /**
- * POST /api/readings/ingest — Supabase Database Webhook target for INSERTs
- * on public.devices. This keeps Redis current even if no dashboard is open.
+ * POST /api/readings/ingest — Supabase Database Webhook target for INSERT
+ * on public.sensor_readings. Keeps Redis current even if no dashboard is open.
  */
 export async function POST(request: Request) {
   const secret = process.env.READINGS_WEBHOOK_SECRET;
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   if (
     event.type !== "INSERT" ||
     event.schema !== "public" ||
-    event.table !== "devices"
+    event.table !== "sensor_readings"
   ) {
     return jsonError("Event webhook tidak didukung.", 400);
   }

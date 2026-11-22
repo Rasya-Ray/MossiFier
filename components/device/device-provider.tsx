@@ -12,13 +12,14 @@ import {
 import { useDeviceId } from "@/lib/device-store";
 import { useSession } from "@/components/auth/session-provider";
 import {
-  DEFAULT_DEVICE_ID,
-  DEMO_DEVICE_ID,
+  DEFAULT_DEVICE_MAC,
+  DEMO_DEVICE_MAC,
   isDemoUser,
 } from "@/lib/demo";
 import { DeviceDialog } from "@/components/device/device-dialog";
 
 type DeviceContextValue = {
+  /** MAC address device aktif (12 hex), atau null kalau belum dipilih. */
   deviceId: string | null;
   /** False selama hydration: hindari kedipan "belum ada device" di HP. */
   ready: boolean;
@@ -54,8 +55,8 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
   // Demo selalu memakai perangkat pameran. Akun lain langsung memakai device
   // default kalau belum memilih; pilihan manual per akun tetap menang.
   const deviceId = isDemoUser(session)
-    ? DEMO_DEVICE_ID
-    : (storedDeviceId ?? DEFAULT_DEVICE_ID);
+    ? DEMO_DEVICE_MAC
+    : (storedDeviceId ?? DEFAULT_DEVICE_MAC);
 
   const openDialog = useCallback(() => setOpen(true), []);
   const closeDialog = useCallback(() => setOpen(false), []);

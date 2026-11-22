@@ -1,17 +1,17 @@
-import type { SensorReading } from "@/lib/sensors";
+import type { PublicSensorReading } from "@/lib/sensors";
 
 /**
  * Cache pembacaan terakhir per device di localStorage.
- * Tujuan: saat halaman dibuka ulang / koneksi Supabase putus, dashboard tetap
- * menampilkan data terakhir yang diketahui (bukan "belum ada data").
- * Cache hanya untuk tampilan; sumber kebenaran tetap tabel `devices`.
+ * Tujuan: saat halaman dibuka ulang / koneksi putus, dashboard tetap menampilkan
+ * data terakhir yang diketahui (bukan "belum ada data").
+ * Cache hanya untuk tampilan; sumber kebenaran tetap `sensor_readings`.
  */
 const STORAGE_PREFIX = "mossifier.last_readings";
 const MAX_ROWS = 20;
 
 type CachedReadings = {
   savedAt: number;
-  readings: SensorReading[];
+  readings: PublicSensorReading[];
 };
 
 function storageKey(deviceId: string): string {
@@ -31,7 +31,7 @@ export function readCachedReadings(deviceId: string): CachedReadings | null {
     if (!Array.isArray(parsed.readings)) return null;
 
     const readings = parsed.readings
-      .filter((row) => row?.device_id === deviceId)
+      .filter((row) => Boolean(row?.id) && typeof row?.created_at === "string")
       .slice(-MAX_ROWS);
 
     if (readings.length === 0) return null;
@@ -43,7 +43,7 @@ export function readCachedReadings(deviceId: string): CachedReadings | null {
 
 export function writeCachedReadings(
   deviceId: string,
-  readings: SensorReading[],
+  readings: PublicSensorReading[],
 ): void {
   if (typeof window === "undefined" || readings.length === 0) return;
 
