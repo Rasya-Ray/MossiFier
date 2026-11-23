@@ -5,6 +5,10 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast } from "react-toastify";
 import { useSession } from "@/components/auth/session-provider";
 import { saveDeviceId } from "@/lib/device-store";
+import {
+  DEVICE_ID_EXAMPLE,
+  normalizeDeviceId,
+} from "@/lib/device-id";
 import { SignalIcon } from "@/components/dashboard/icons";
 
 type DeviceDialogProps = {
@@ -13,9 +17,7 @@ type DeviceDialogProps = {
   onClose: () => void;
 };
 
-const MAC_PATTERN = /^[0-9A-Fa-f]{12}$/;
-
-/** Modal "Tambah / Ganti device" — klaim perangkat lewat MAC address. */
+/** Modal "Tambah / Ganti device" — klaim perangkat lewat ID device (MOSS-…). */
 export function DeviceDialog({ open, current, onClose }: DeviceDialogProps) {
   const session = useSession();
   const [saving, setSaving] = useState(false);
@@ -25,10 +27,12 @@ export function DeviceDialog({ open, current, onClose }: DeviceDialogProps) {
     if (saving) return;
 
     const raw = new FormData(event.currentTarget).get("mac_address");
-    const macAddress = typeof raw === "string" ? raw.trim().toUpperCase() : "";
+    const macAddress = normalizeDeviceId(raw);
 
-    if (!MAC_PATTERN.test(macAddress)) {
-      toast.error("MAC address harus 12 karakter hex (contoh: B0A7322B0960).");
+    if (!macAddress) {
+      toast.error(
+        `ID device harus berformat MOSS- diikuti MAC 12 hex (contoh: ${DEVICE_ID_EXAMPLE}).`,
+      );
       return;
     }
 
@@ -86,19 +90,19 @@ export function DeviceDialog({ open, current, onClose }: DeviceDialogProps) {
                   {current ? "Ganti device" : "Tambah device"}
                 </h2>
                 <p className="text-xs text-forest-mist/70">
-                  Masukkan MAC address perangkat ESP32.
+                  Masukkan ID device (MOSS- + MAC) perangkatmu.
                 </p>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="mt-6">
               <label className="block text-xs font-medium text-forest-mist/80">
-                MAC Address
+                ID Device
                 <input
                   name="mac_address"
                   defaultValue={current ?? ""}
-                  placeholder="B0A7322B0960"
-                  maxLength={12}
+                  placeholder={DEVICE_ID_EXAMPLE}
+                  maxLength={17}
                   autoFocus
                   spellCheck={false}
                   autoComplete="off"
@@ -106,8 +110,9 @@ export function DeviceDialog({ open, current, onClose }: DeviceDialogProps) {
                 />
               </label>
               <p className="mt-2 text-[11px] leading-5 text-forest-mist/60">
-                Device harus sudah mendaftar lewat RPC register_device. 12
-                karakter hex, tanpa titik dua.
+                Format: MOSS- diikuti 12 karakter hex MAC, tanpa titik dua. ID
+                tercetak di Serial Monitor saat ESP32 menyala, dan perangkat
+                harus sudah terhubung ke internet agar terdaftar.
               </p>
 
               <div className="mt-6 flex gap-2.5">

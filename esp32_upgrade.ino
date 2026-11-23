@@ -24,9 +24,17 @@ const char* supabaseUrl = "https://ujnwgtdvwguebwxnorut.supabase.co";
 const char* supabaseKey = "sb_publishable_Z8m_9Kld6vLzO-dsVH5SHQ_ctsCVZXH";
 
 // === IDENTITAS DEVICE ===
-// MAC 12 hex huruf besar, TANPA titik dua. Sama dengan MAC yang dimasukkan
-// di dashboard (sidebar → Tambah/Ganti device) dan .env DEVICE_MAC.
-const char* deviceMac = "B0A7322B0960";
+// Dibentuk otomatis saat boot: "MOSS-" + MAC 12 hex huruf besar tanpa titik dua,
+// mis. MOSS-B0A7322B0960. ID ini dicetak di Serial Monitor — masukkan persis
+// itu di dashboard (sidebar → Tambah/Ganti device).
+String deviceId = "";
+
+String buatDeviceId() {
+  String mac = WiFi.macAddress();   // "B0:A7:32:2B:09:60"
+  mac.replace(":", "");
+  mac.toUpperCase();
+  return "MOSS-" + mac;
+}
 
 // Interval kirim sensor. Dashboard memuat ulang data tiap ~10 detik.
 const unsigned long sendInterval = 7500;
@@ -38,6 +46,9 @@ void setup() {
   randomSeed(micros());
 
   Serial.println("Menyiapkan ESP32...");
+  WiFi.mode(WIFI_STA);              // MAC baru terbaca benar setelah mode STA
+  deviceId = buatDeviceId();
+  Serial.println("ID device: " + deviceId);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -96,7 +107,7 @@ void siapkanHeader(HTTPClient& http) {
   http.addHeader("Content-Type", "application/json");
 }
 
-/** RPC register_device(p_mac TEXT) — idempotent, aman dipanggil berulang. */
+/** RPC register_device(p_mac TEXT, isinya ID MOSS-xxxxxxxxxxxx) — idempotent, aman dipanggil berulang. */
 void registerDevice() {
   if (!pastikanWifi()) return;
 
@@ -104,13 +115,13 @@ void registerDevice() {
   http.begin(String(supabaseUrl) + "/rest/v1/rpc/register_device");
   siapkanHeader(http);
 
-  String body = "{\"p_mac\":\"" + String(deviceMac) + "\"}";
+  String body = "{\"p_mac\":\"" + deviceId + "\"}";
   int code = http.POST(body);
   String payload = http.getString();
 
   if (code >= 200 && code < 300) {
     deviceRegistered = true;
-    Serial.println("Device terdaftar: " + String(deviceMac));
+    Serial.println("Device terdaftar: " + deviceId);
   } else {
     Serial.printf("register_device gagal (%d): %s\n", code, payload.c_str());
   }
@@ -126,9 +137,7 @@ void kirimSensor() {
   // === CONTOH NILAI ===
   // Ganti bagian ini dengan pembacaan sensor / hasil klasifikasi aslimu.
   int plantStatus = random(0, 3);                 // 0=Sehat, 1=Sakit, 2=Mati
-  float visionConf = random(70, 100) / 100.0;     // 0..1
   float soilMoisture = random(60, 96);            // persen
-  int soilRaw = random(0, 4096);                  // ADC
   int mq1 = random(0, 500);
   int mq2 = random(0, 500);
   int pm1 = random(0, 80);
@@ -139,11 +148,9 @@ void kirimSensor() {
   float led = random(0, 101);                     // persen 0..100
 
   String body = "{";
-  body += "\"p_mac\":\"" + String(deviceMac) + "\",";
+  body += "\"p_mac\":\"" + deviceId + "\",";
   body += "\"p_plant_status\":" + String(plantStatus) + ",";
-  body += "\"p_vision_conf\":" + String(visionConf, 2) + ",";
   body += "\"p_soil_moisture\":" + String(soilMoisture, 1) + ",";
-  body += "\"p_soil_raw\":" + String(soilRaw) + ",";
   body += "\"p_mq135_1\":" + String(mq1) + ",";
   body += "\"p_mq135_2\":" + String(mq2) + ",";
   body += "\"p_pm1\":" + String(pm1) + ",";

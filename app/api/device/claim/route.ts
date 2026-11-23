@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { findDeviceForUser } from "@/lib/device-access";
+import { findDeviceForUser, isShowcaseDevice } from "@/lib/device-access";
 import { isDemoUser } from "@/lib/demo";
 import { getAdminClient } from "@/lib/supabase-admin";
 
@@ -9,7 +9,7 @@ function jsonError(message: string, status: number) {
 }
 
 /**
- * POST /api/device/claim — { macAddress: "B0A7322B0960" }
+ * POST /api/device/claim — { macAddress: "MOSS-B0A7322B0960" } (ID device penuh)
  *
  * Klaim device yang sudah mendaftar lewat RPC register_device.
  * Idempotent: MAC yang sudah jadi milik user yang sama tetap 200.
@@ -24,9 +24,11 @@ export async function POST(request: Request) {
 
   const { device } = access;
 
-  // Sesi demo memakai perangkat pameran bersama — jangan menulis user_id
-  // (id "demo-juri" bukan UUID dan akan melanggar FK).
-  if (isDemoUser(user)) {
+  // Akun demo tidak pernah mengklaim (id "demo-juri" bukan UUID dan akan
+  // melanggar FK) dan boleh memakai device apa pun, termasuk yang sudah
+  // diklaim akun lain. Device pameran juga tidak dikunci: semua akun boleh
+  // memakainya bersama demo.
+  if (isDemoUser(user) || isShowcaseDevice(device.macAddress)) {
     return NextResponse.json({
       ok: true,
       device: { macAddress: device.macAddress, claimed: false, demo: true },

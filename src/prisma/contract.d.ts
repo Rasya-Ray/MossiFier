@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'fe43837330fe408658522dabd6da80d4ab8293c372f01cc6bd722e6c82d2825c'>;
+  StorageHashBase<'71a949ee56942a2ad95b192fdcfab793dd79615a8c289f927444a5f5c4bcfbad'>;
 export type ExecutionHash =
   ExecutionHashBase<'34fdceafe2648e6ebaf0c7f68828f0aa9e5f075078373d0aef4f67d33e745fdf'>;
 export type ProfileHash =
@@ -329,11 +329,10 @@ export namespace Models {
     mq135_2: FieldOutputTypes['public']['SensorReading']['mq135_2'];
     plant_status: FieldOutputTypes['public']['SensorReading']['plant_status'];
     pm1: FieldOutputTypes['public']['SensorReading']['pm1'];
+    pm10: FieldOutputTypes['public']['SensorReading']['pm10'];
     pm25: FieldOutputTypes['public']['SensorReading']['pm25'];
     pump: FieldOutputTypes['public']['SensorReading']['pump'];
     soil_moisture: FieldOutputTypes['public']['SensorReading']['soil_moisture'];
-    soil_raw: FieldOutputTypes['public']['SensorReading']['soil_raw'];
-    vision_conf: FieldOutputTypes['public']['SensorReading']['vision_conf'];
     device: public_Device;
     readonly [RelationKeys]?: 'device';
   };
@@ -506,6 +505,12 @@ type ContractBase = Omit<
                   readonly nullable: true;
                   readonly many: false;
                 };
+                readonly pm10: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
                 readonly pm25: {
                   readonly dataType: 'pg/int4';
                   readonly codecId: 'pg/int4@1';
@@ -519,18 +524,6 @@ type ContractBase = Omit<
                   readonly many: false;
                 };
                 readonly soil_moisture: {
-                  readonly dataType: 'pg/float4';
-                  readonly codecId: 'pg/float4@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly soil_raw: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly vision_conf: {
                   readonly dataType: 'pg/float4';
                   readonly codecId: 'pg/float4@1';
                   readonly nullable: true;
@@ -731,6 +724,10 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
+              readonly pm10: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
               readonly pm25: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
@@ -740,14 +737,6 @@ type ContractBase = Omit<
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
               readonly soil_moisture: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float4@1' };
-              };
-              readonly soil_raw: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly vision_conf: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float4@1' };
               };
@@ -779,11 +768,10 @@ type ContractBase = Omit<
                 readonly mq135_2: { readonly column: 'mq135_2' };
                 readonly plant_status: { readonly column: 'plant_status' };
                 readonly pm1: { readonly column: 'pm1' };
+                readonly pm10: { readonly column: 'pm10' };
                 readonly pm25: { readonly column: 'pm25' };
                 readonly pump: { readonly column: 'pump' };
                 readonly soil_moisture: { readonly column: 'soil_moisture' };
-                readonly soil_raw: { readonly column: 'soil_raw' };
-                readonly vision_conf: { readonly column: 'vision_conf' };
               };
             };
           };

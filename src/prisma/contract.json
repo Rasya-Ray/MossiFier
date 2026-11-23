@@ -183,6 +183,13 @@
                   "kind": "scalar"
                 }
               },
+              "pm10": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "pm25": {
                 "nullable": true,
                 "type": {
@@ -198,20 +205,6 @@
                 }
               },
               "soil_moisture": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/float4@1",
-                  "kind": "scalar"
-                }
-              },
-              "soil_raw": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/int4@1",
-                  "kind": "scalar"
-                }
-              },
-              "vision_conf": {
                 "nullable": true,
                 "type": {
                   "codecId": "pg/float4@1",
@@ -266,6 +259,9 @@
                 "pm1": {
                   "column": "pm1"
                 },
+                "pm10": {
+                  "column": "pm10"
+                },
                 "pm25": {
                   "column": "pm25"
                 },
@@ -274,12 +270,6 @@
                 },
                 "soil_moisture": {
                   "column": "soil_moisture"
-                },
-                "soil_raw": {
-                  "column": "soil_raw"
-                },
-                "vision_conf": {
-                  "column": "vision_conf"
                 }
               },
               "namespaceId": "public",
@@ -520,6 +510,11 @@
                   "dataType": "pg/int4",
                   "nullable": true
                 },
+                "pm10": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
                 "pm25": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
@@ -531,16 +526,6 @@
                   "nullable": true
                 },
                 "soil_moisture": {
-                  "codecId": "pg/float4@1",
-                  "dataType": "pg/float4",
-                  "nullable": true
-                },
-                "soil_raw": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
-                  "nullable": true
-                },
-                "vision_conf": {
                   "codecId": "pg/float4@1",
                   "dataType": "pg/float4",
                   "nullable": true
@@ -649,7 +634,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "fe43837330fe408658522dabd6da80d4ab8293c372f01cc6bd722e6c82d2825c"
+    "storageHash": "71a949ee56942a2ad95b192fdcfab793dd79615a8c289f927444a5f5c4bcfbad"
   },
   "execution": {
     "executionHash": "34fdceafe2648e6ebaf0c7f68828f0aa9e5f075078373d0aef4f67d33e745fdf",

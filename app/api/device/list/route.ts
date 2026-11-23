@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { findDeviceForUser } from "@/lib/device-access";
-import { DEFAULT_DEVICE_MAC, isDemoUser } from "@/lib/demo";
+import { DEFAULT_DEVICE_ID, isDemoUser } from "@/lib/demo";
 import { getAdminClient } from "@/lib/supabase-admin";
 
 function jsonError(message: string, status: number) {
@@ -16,7 +16,7 @@ export async function GET() {
   // Sesi demo tidak punya baris di tabel users, jadi tampilkan perangkat
   // pameran saja (jika sudah terdaftar lewat register_device).
   if (isDemoUser(user)) {
-    const access = await findDeviceForUser(DEFAULT_DEVICE_MAC, user);
+    const access = await findDeviceForUser(DEFAULT_DEVICE_ID, user);
     const devices = access.ok
       ? [
           {

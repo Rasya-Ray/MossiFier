@@ -5,8 +5,8 @@ import type { SensorReading } from "@/lib/sensors";
  * Cache "pembacaan terakhir" per device di Upstash Redis.
  *
  * Key   : `mossifier:latest:<device_id_int>`
- * Field : id, device_id, created_at, plant_status, vision_conf, soil_moisture,
- *         soil_raw, mq135_1, mq135_2, pm1, pm25, pm10, pump, fan, led, cached_at
+ * Field : id, device_id, created_at, plant_status, soil_moisture,
+ *         mq135_1, mq135_2, pm1, pm25, pm10, pump, fan, led, cached_at
  */
 
 const KEY_PREFIX = "mossifier:latest:";
@@ -14,9 +14,7 @@ const CACHE_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 const HASH_FIELDS = [
   "plant_status",
-  "vision_conf",
   "soil_moisture",
-  "soil_raw",
   "mq135_1",
   "mq135_2",
   "pm1",
@@ -126,9 +124,7 @@ function deserialize(hash: Record<string, string>): LatestReading | null {
     device_id: deviceId,
     created_at: createdAt,
     plant_status: toNumber(hash.plant_status),
-    vision_conf: toNumber(hash.vision_conf),
     soil_moisture: toNumber(hash.soil_moisture),
-    soil_raw: toNumber(hash.soil_raw),
     mq135_1: toNumber(hash.mq135_1),
     mq135_2: toNumber(hash.mq135_2),
     pm1: toNumber(hash.pm1),

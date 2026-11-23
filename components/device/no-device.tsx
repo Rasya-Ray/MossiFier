@@ -25,8 +25,8 @@ export function NoDevice({ title = "Belum ada perangkat terpilih" }: NoDevicePro
         </span>
         <h1 className="mt-5 text-xl font-semibold text-forest-mist">{title}</h1>
         <p className="mt-2 text-sm leading-6 text-forest-mist/70">
-          Masukkan MAC address Mossifier-mu (12 karakter hex, contoh
-          B0A7322B0960) supaya data sensor bisa tampil di sini.
+          Masukkan ID device Mossifier-mu (format MOSS- diikuti MAC, contoh
+          MOSS-B0A7322B0960) supaya data sensor bisa tampil di sini.
         </p>
         <button
           type="button"

@@ -79,11 +79,11 @@ function formatLine(row: SensorReading, key: SensorKey): string {
  * Tidak pernah melempar error: kegagalan dilaporkan sebagai teks supaya
  * chatbot tetap bisa menjawab pertanyaan umum.
  *
- * MAC divalidasi dan kepemilikan dicek dulu — pengguna tidak bisa memaksa
+ * ID device divalidasi dan kepemilikan dicek dulu — pengguna tidak bisa memaksa
  * Kibo membocorkan data device milik akun lain.
  */
 export async function buildSensorContext(
-  macAddress: string | null,
+  deviceId: string | null,
   user: SessionUser,
 ): Promise<string> {
   const now = Date.now();
@@ -92,14 +92,14 @@ export async function buildSensorContext(
     `Waktu sekarang: ${dateTime.format(now)} WIB`,
   ];
 
-  if (!macAddress) {
+  if (!deviceId) {
     lines.push(
       'Pengguna BELUM memilih device di dashboard, jadi tidak ada data sensor. Arahkan untuk memilih lewat tombol "Tambah/Ganti device" di sidebar.',
     );
     return lines.join("\n");
   }
 
-  const access = await findDeviceForUser(macAddress, user);
+  const access = await findDeviceForUser(deviceId, user);
   if (!access.ok) {
     lines.push(
       "Device yang dipilih tidak bisa diakses. Jangan menebak data sensor-nya; sarankan pengguna memilih device miliknya sendiri lewat sidebar.",
@@ -107,7 +107,7 @@ export async function buildSensorContext(
     return lines.join("\n");
   }
 
-  lines.push(`Device aktif (MAC): ${access.device.macAddress}`);
+  lines.push(`Device aktif (ID): ${access.device.macAddress}`);
   if (access.device.name) {
     lines.push(`Nama device: ${access.device.name.slice(0, 60)}`);
   }
@@ -126,7 +126,7 @@ export async function buildSensorContext(
   const latest = readings.at(-1);
   if (!latest) {
     lines.push(
-      "Belum ada data masuk untuk device ini. Mungkin perangkat belum menyala/terhubung atau MAC salah.",
+      "Belum ada data masuk untuk device ini. Mungkin perangkat belum menyala/terhubung atau ID device salah.",
     );
     return lines.join("\n");
   }

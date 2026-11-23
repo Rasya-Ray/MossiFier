@@ -1,8 +1,9 @@
 /**
  * Helper akses device (server-only).
  *
- * Identitas device = MAC address 12 hex huruf besar. `devices.id` (integer)
- * hanya dipakai internal untuk query ke `sensor_readings`.
+ * Identitas device = `MOSS-` + MAC 12 hex huruf besar (lib/device-id.ts),
+ * disimpan utuh di kolom `devices.mac_address`. `devices.id` (integer) hanya
+ * dipakai internal untuk query ke `sensor_readings`.
  *
  * Semua endpoint membaca data lewat service_role karena RLS aktif tanpa
  * policy anon. Helper ini memastikan user tidak bisa membaca/memodifikasi
@@ -10,16 +11,15 @@
  */
 
 import type { SessionUser } from "@/lib/auth/types";
-import { DEFAULT_DEVICE_MAC, DEMO_DEVICE_MAC, isDemoUser } from "@/lib/demo";
+import { DEFAULT_DEVICE_ID, DEMO_DEVICE_ID, isDemoUser } from "@/lib/demo";
+import { DEVICE_ID_EXAMPLE, normalizeDeviceId } from "@/lib/device-id";
 import { getAdminClient } from "@/lib/supabase-admin";
 
-/** MAC 12 hex tanpa pemisah, mis. B0A7322B0960. */
-export const MAC_PATTERN = /^[0-9A-F]{12}$/;
+export { normalizeDeviceId };
 
-export function normalizeMac(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const mac = value.trim().toUpperCase();
-  return MAC_PATTERN.test(mac) ? mac : null;
+/** True untuk device pameran yang boleh dipakai semua akun. */
+export function isShowcaseDevice(deviceId: string): boolean {
+  return deviceId === DEMO_DEVICE_ID || deviceId === DEFAULT_DEVICE_ID;
 }
 
 export type AccessibleDevice = {
@@ -35,20 +35,21 @@ export type DeviceLookup =
   | { ok: false; status: 400 | 403 | 404 | 503; error: string };
 
 /**
- * Sesi demo memakai perangkat pameran bersama. Device ini sengaja tidak
- * di-claim ke user (id `demo-juri` bukan UUID), tapi harus tetap bisa dibaca
- * supaya tombol demo selalu berfungsi.
+ * Aturan akses:
+ * - Akun demo boleh membaca device apa pun, walau sudah diklaim akun lain.
+ *   Demo tidak pernah mengklaim (id `demo-juri` bukan UUID), jadi tidak bisa
+ *   mengunci atau mengganggu pemilik asli.
+ * - Device pameran (demo/default) boleh dipakai semua akun.
+ * - Selain itu hanya pemilik, atau siapa pun selama device belum diklaim.
  */
-function isShowcaseMac(mac: string, user: SessionUser): boolean {
-  return (
-    isDemoUser(user) &&
-    (mac === DEMO_DEVICE_MAC || mac === DEFAULT_DEVICE_MAC)
-  );
-}
-
-function canAccess(ownerId: string | null, user: SessionUser, mac: string): boolean {
+function canAccess(
+  ownerId: string | null,
+  user: SessionUser,
+  deviceId: string,
+): boolean {
+  if (isDemoUser(user)) return true;
   if (!ownerId || ownerId === user.id) return true;
-  return isShowcaseMac(mac, user);
+  return isShowcaseDevice(deviceId);
 }
 
 function toAccessibleDevice(row: Record<string, unknown>): AccessibleDevice | null {
@@ -64,12 +65,16 @@ function toAccessibleDevice(row: Record<string, unknown>): AccessibleDevice | nu
 
 /** Cari device berdasarkan MAC dan pastikan user boleh mengaksesnya. */
 export async function findDeviceForUser(
-  rawMac: unknown,
+  rawId: unknown,
   user: SessionUser,
 ): Promise<DeviceLookup> {
-  const mac = normalizeMac(rawMac);
+  const mac = normalizeDeviceId(rawId);
   if (!mac) {
-    return { ok: false, status: 400, error: "MAC address tidak valid (12 hex)." };
+    return {
+      ok: false,
+      status: 400,
+      error: `ID device tidak valid. Formatnya MOSS- diikuti MAC 12 hex, contoh ${DEVICE_ID_EXAMPLE}.`,
+    };
   }
 
   let supabase;
@@ -90,11 +95,11 @@ export async function findDeviceForUser(
     .maybeSingle();
 
   if (error) {
-    console.error("[device-access] gagal mencari MAC:", error.message);
+    console.error("[device-access] gagal mencari ID device:", error.message);
     return { ok: false, status: 503, error: "Database belum bisa diakses." };
   }
   if (!data) {
-    return { ok: false, status: 404, error: "Device dengan MAC ini tidak ditemukan." };
+    return { ok: false, status: 404, error: "Device dengan ID ini belum terdaftar. Pastikan ESP32 sudah menyala dan terhubung ke internet." };
   }
 
   const device = toAccessibleDevice(data as Record<string, unknown>);

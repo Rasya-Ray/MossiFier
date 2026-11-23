@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { SYSTEM_PROMPT } from "@/lib/chat/knowledge";
 import { appendChatMemory, readChatMemory } from "@/lib/chat/memory";
 import { buildSensorContext } from "@/lib/chat/sensor-context";
-import { normalizeMac } from "@/lib/device-access";
+import { normalizeDeviceId } from "@/lib/device-id";
 import { ChatUpstreamError, openChatReply } from "@/lib/chat/upstream";
 import {
   CHAT_MAX_HISTORY,
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
   const messages = parseMessages(body?.messages);
   if (!messages) return jsonError("Pesan tidak valid.", 400);
 
-  const deviceId = normalizeMac(body?.deviceId);
+  const deviceId = normalizeDeviceId(body?.deviceId);
 
   if (rateLimited(user.id)) {
     return jsonError("Terlalu banyak pesan. Tunggu sebentar ya.", 429);

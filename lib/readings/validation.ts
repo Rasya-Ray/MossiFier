@@ -6,9 +6,7 @@
 import type { SensorReading } from "@/lib/sensors";
 
 const NUMERIC_FIELDS = [
-  "vision_conf",
   "soil_moisture",
-  "soil_raw",
   "mq135_1",
   "mq135_2",
   "pm1",
@@ -64,9 +62,7 @@ export function parseReading(value: unknown): SensorReading | null {
     device_id: deviceId,
     created_at: row.created_at as string,
     plant_status: row.plant_status != null ? (Number(row.plant_status) as 0 | 1 | 2) : null,
-    vision_conf: row.vision_conf != null ? Number(row.vision_conf) : null,
     soil_moisture: row.soil_moisture != null ? Number(row.soil_moisture) : null,
-    soil_raw: row.soil_raw != null ? Number(row.soil_raw) : null,
     mq135_1: row.mq135_1 != null ? Number(row.mq135_1) : null,
     mq135_2: row.mq135_2 != null ? Number(row.mq135_2) : null,
     pm1: row.pm1 != null ? Number(row.pm1) : null,

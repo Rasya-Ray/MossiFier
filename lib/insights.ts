@@ -104,10 +104,6 @@ export function sensorHint(
     case "mq135_1":
     case "mq135_2":
       return "Dibaca dari sensor gas";
-    case "soil_raw":
-      return "Nilai mentah sensor tanah";
-    case "vision_conf":
-      return `Keyakinan AI ${Math.round(value * 100)}%`;
     case "fan":
       return fanLevel(value).label;
     case "led":

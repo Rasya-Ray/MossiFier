@@ -49,7 +49,7 @@ async function fetchLatestFromSupabase(
 }
 
 /**
- * GET /api/readings/latest?macAddress=B0A7322B0960
+ * GET /api/readings/latest?macAddress=MOSS-B0A7322B0960
  * Redis-first; kalau kosong, ambil satu baris terbaru dari Supabase.
  */
 export async function GET(request: Request) {

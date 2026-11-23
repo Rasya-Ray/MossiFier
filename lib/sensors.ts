@@ -7,9 +7,7 @@ import { plantStatusText } from "@/lib/labels";
 
 export const SENSOR_KEYS = [
   "plant_status",
-  "vision_conf",
   "soil_moisture",
-  "soil_raw",
   "mq135_1",
   "mq135_2",
   "pm1",
@@ -31,9 +29,7 @@ export type SensorReading = {
   device_id: number;
   created_at: string;
   plant_status: number | null;
-  vision_conf: number | null;
   soil_moisture: number | null;
-  soil_raw: number | null;
   mq135_1: number | null;
   mq135_2: number | null;
   pm1: number | null;
@@ -48,13 +44,11 @@ export type SensorReading = {
 
 /** Kolom yang di-select dari Supabase (urutan tabel sensor_readings). */
 export const SENSOR_COLUMNS =
-  "id, device_id, created_at, plant_status, vision_conf, soil_moisture, soil_raw, mq135_1, mq135_2, pm1, pm25, pm10, pump, fan, led";
+  "id, device_id, created_at, plant_status, soil_moisture, mq135_1, mq135_2, pm1, pm25, pm10, pump, fan, led";
 
 export const SENSOR_LABELS: Record<SensorFieldKey, string> = {
   plant_status: "Status Tanaman",
-  vision_conf: "Confidence AI",
   soil_moisture: "Kelembapan Tanah",
-  soil_raw: "Soil Raw",
   mq135_1: "MQ-135 #1",
   mq135_2: "MQ-135 #2",
   pm1: "PM1.0",
@@ -67,9 +61,7 @@ export const SENSOR_LABELS: Record<SensorFieldKey, string> = {
 
 export const SENSOR_DESCRIPTIONS: Record<SensorFieldKey, string> = {
   plant_status: "Hasil klasifikasi AI: 0 = Sehat, 1 = Sakit, 2 = Mati.",
-  vision_conf: "Skor keyakinan AI terhadap klasifikasi tanaman (0–1).",
   soil_moisture: "Kelembapan tanah dalam persentase. Lumut nyaman di 70–90%.",
-  soil_raw: "Nilai mentah sensor kelembapan tanah (ADC).",
   mq135_1: "Pembacaan sensor gas MQ-135 pertama (kualitas udara).",
   mq135_2: "Pembacaan sensor gas MQ-135 kedua (redundan).",
   pm1: "Partikel udara < 1 µm (PM1.0).",
@@ -88,11 +80,6 @@ export const SENSOR_UNITS: Partial<Record<SensorFieldKey, string>> = {
 
 const numberFormatter = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 1,
-});
-
-/** confidence AI butuh 2 angka desimal (0,95 jangan dibulatkan jadi 1). */
-const confidenceFormatter = new Intl.NumberFormat("id-ID", {
-  maximumFractionDigits: 2,
 });
 
 /** Ambil nilai mentah satu kolom dari sebuah baris. */
@@ -133,7 +120,7 @@ export function formatSensorValue(
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) return String(value);
 
-  const formatter = key === "vision_conf" ? confidenceFormatter : numberFormatter;
+  const formatter = numberFormatter;
   const unit = SENSOR_UNITS[key];
   return unit
     ? `${formatter.format(numeric)} ${unit}`

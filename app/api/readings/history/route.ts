@@ -9,7 +9,7 @@ function jsonError(message: string, status: number) {
 }
 
 /**
- * GET /api/readings/history?macAddress=B0A7322B0960&limit=20
+ * GET /api/readings/history?macAddress=MOSS-B0A7322B0960&limit=20
  *
  * Riwayat sensor untuk grafik. Dibaca server-side (service role) karena
  * tabel sensor_readings memakai RLS tanpa policy anon.

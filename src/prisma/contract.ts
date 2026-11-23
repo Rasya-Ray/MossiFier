@@ -25,7 +25,8 @@ const User = model('User', {
 }).sql({ table: 'users' });
 
 // ============================================================
-// Tabel 2: devices — identitas perangkat (MAC address unik)
+// Tabel 2: devices — identitas perangkat. Kolom `mac_address` menyimpan ID
+// penuh berformat MOSS-<MAC 12 hex> (unik).
 // ============================================================
 const Device = model('Device', {
   fields: {
@@ -59,13 +60,12 @@ const SensorReading = model('SensorReading', {
     device_id: field.column(type.Int()),
     created_at: field.column(type.DateTime()).default(now()).onCreate(gen.now()),
     plant_status: field.column(type.Int()).optional(),
-    vision_conf: field.column(type.Float({ storage: 'float4' })).optional(),
     soil_moisture: field.column(type.Float({ storage: 'float4' })).optional(),
-    soil_raw: field.column(type.Int()).optional(),
     mq135_1: field.column(type.Int()).optional(),
     mq135_2: field.column(type.Int()).optional(),
     pm1: field.column(type.Int()).optional(),
     pm25: field.column(type.Int()).optional(),
+    pm10: field.column(type.Int()).optional(),
     pump: field.column(type.Boolean()).optional(),
     // Persentase 0–100 (bukan boolean)
     fan: field.column(type.Float({ storage: 'float4' })).optional(),
