@@ -28,8 +28,8 @@
 // WIFI + SUPABASE
 // ==================================================
 
-const char* WIFI_SSID = "Ga modal";
-const char* WIFI_PASSWORD = "Atuampe8";
+const char* WIFI_SSID = "";
+const char* WIFI_PASSWORD = "";
 
 const char* SUPABASE_URL = "https://ujnwgtdvwguebwxnorut.supabase.co";
 const char* SUPABASE_KEY = "sb_publishable_Z8m_9Kld6vLzO-dsVH5SHQ_ctsCVZXH";
