@@ -5,7 +5,16 @@
  * supaya dashboard dan Kibo tidak saling bertentangan.
  */
 
-import type { PublicSensorReading, SensorKey } from "@/lib/sensors";
+import {
+  CO2_GUIDANCE,
+  co2Category,
+  overallAirQuality,
+  pm1Category,
+  pm10Category,
+  pm25Category,
+  type CardTone,
+} from "@/lib/air-quality";
+import { formatSensorValue, type PublicSensorReading, type SensorKey } from "@/lib/sensors";
 import { plantStatusText, plantStatusTone } from "@/lib/labels";
 
 export type InsightTone = "good" | "info" | "warn" | "bad";
@@ -52,9 +61,9 @@ export function greetingFor(hour: number): string {
 type Level = { tone: InsightTone; label: string };
 
 function humidityLevel(pct: number): Level {
-  if (pct < 50) return { tone: "bad", label: "Terlalu kering untuk lumut" };
-  if (pct < 70) return { tone: "warn", label: "Agak kering (ideal 70–90%)" };
-  if (pct <= 90) return { tone: "good", label: "Ideal untuk lumut" };
+  if (pct < 50) return { tone: "bad", label: "Terlalu kering" };
+  if (pct < 70) return { tone: "warn", label: "Agak kering" };
+  if (pct <= 90) return { tone: "good", label: "Ideal" };
   return { tone: "warn", label: "Terlalu basah" };
 }
 
@@ -70,40 +79,113 @@ function ledLevel(pct: number): Level {
   return { tone: "warn", label: "Terlalu terang/panas" };
 }
 
-/** Keterangan pendek di bawah angka pada kartu sensor. */
-export function sensorHint(
+export type SensorStatusInfo = {
+  /** Label status singkat untuk badge kartu. */
+  badge: string;
+  tone: CardTone;
+  /** Kalimat pendek yang mudah dipahami. */
+  hint: string;
+};
+
+const MISSING_STATUS: SensorStatusInfo = {
+  badge: "Belum ada data",
+  tone: "neutral",
+  hint: "Menunggu data dari perangkat",
+};
+
+function toCardTone(tone: "good" | "info" | "warn" | "bad"): CardTone {
+  if (tone === "good") return "good";
+  if (tone === "warn") return "moderate";
+  if (tone === "bad") return "unhealthy";
+  return "neutral";
+}
+
+/**
+ * Status + wording sederhana untuk satu kartu sensor.
+ * Dipakai overview, halaman detail, dan chatbot supaya semua konsisten.
+ */
+export function sensorStatus(
   key: SensorKey,
   value: number | boolean | string | null | undefined,
-): string {
+): SensorStatusInfo {
   if (key === "status") {
-    // status dijamin string di sini (tidak boolean), tapi type masih number|string|...
     const text = plantStatusText(value as string | number | null | undefined);
-    return text === "Belum ada data" ? "Menunggu data dari perangkat" : text;
+    if (text === "Belum ada data") return MISSING_STATUS;
+    return {
+      badge: text,
+      tone: toCardTone(plantStatusTone(value as string | number | null | undefined)),
+      hint: "Kondisi lumut saat ini",
+    };
   }
+
   if (key === "pump") {
-    if (typeof value !== "boolean") return "Menunggu data";
-    return value ? "Pompa menyala" : "Pompa mati";
+    if (typeof value !== "boolean") return MISSING_STATUS;
+    return {
+      badge: value ? "Menyala" : "Mati",
+      tone: "neutral",
+      hint: value ? "Pompa sedang menyiram" : "Pompa sedang tidak menyiram",
+    };
   }
-  if (typeof value !== "number" || !Number.isFinite(value)) return "Menunggu data";
+
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return MISSING_STATUS;
+  }
 
   switch (key) {
-    case "humidity":
-      return humidityLevel(value).label;
+    case "humidity": {
+      const level = humidityLevel(value);
+      return {
+        badge: level.label,
+        tone: toCardTone(level.tone),
+        hint: "Ideal untuk lumut: 70–90%",
+      };
+    }
+    case "fan_speed": {
+      const level = fanLevel(value);
+      return {
+        badge: level.label,
+        tone: toCardTone(level.tone),
+        hint: "Idealnya 10–70% dari kecepatan penuh",
+      };
+    }
+    case "brightness": {
+      const level = ledLevel(value);
+      return {
+        badge: level.label,
+        tone: toCardTone(level.tone),
+        hint: "Cukup terang, tapi jangan sampai panas",
+      };
+    }
+    case "pm1": {
+      const category = pm1Category(value);
+      return category
+        ? { badge: category.label, tone: category.level, hint: category.short }
+        : MISSING_STATUS;
+    }
+    case "pm25": {
+      const category = pm25Category(value);
+      return category
+        ? { badge: category.label, tone: category.level, hint: category.short }
+        : MISSING_STATUS;
+    }
+    case "pm10": {
+      const category = pm10Category(value);
+      return category
+        ? { badge: category.label, tone: category.level, hint: category.short }
+        : MISSING_STATUS;
+    }
     case "co2_in":
-    case "co2_out":
-      return "Dibaca dari sensor gas MQ-135";
-    case "fan_speed":
-      return fanLevel(value).label;
-    case "brightness":
-      return ledLevel(value).label;
-    case "pm1":
-      return "Partikulat halus < 1 μm";
-    case "pm25":
-      return "Partikulat halus < 2.5 μm";
-    case "pm10":
-      return "Partikulat < 10 μm";
+    case "co2_out": {
+      const category = co2Category(value);
+      if (!category) return MISSING_STATUS;
+      return {
+        badge: category.label,
+        tone: category.level,
+        hint: CO2_GUIDANCE[category.level].short,
+      };
+    }
     default:
-      return "Menunggu data";
+      return MISSING_STATUS;
   }
 }
 
@@ -157,7 +239,24 @@ export function buildInsights(
     );
   }
 
-  // 2) Kelembapan tanah (humidity)
+  // 2) Status udara (parameter terburuk)
+  const air = overallAirQuality(latest);
+  if (air) {
+    const tone: InsightTone =
+      air.level === "good"
+        ? "good"
+        : air.level === "moderate"
+          ? "warn"
+          : "bad";
+    list.push({
+      id: "air",
+      tone,
+      title: "Status udara",
+      text: `${air.label}. ${air.advice} Penyebab utama: ${air.driverLabel} ${formatSensorValue(air.driverValue, air.driverKey)}.`,
+    });
+  }
+
+  // 3) Kelembapan tanah (humidity)
   if (typeof latest.humidity === "number") {
     const level = humidityLevel(latest.humidity);
     const h = nf.format(latest.humidity);
@@ -170,7 +269,7 @@ export function buildInsights(
     list.push({ id: "humidity", tone: level.tone, title: "Kelembapan tanah", text });
   }
 
-  // 3) Fan & LED (persentase aktuator)
+  // 4) Fan & LED (persentase aktuator)
   if (typeof latest.fan_speed === "number") {
     const level = fanLevel(latest.fan_speed);
     list.push({
@@ -190,7 +289,7 @@ export function buildInsights(
     });
   }
 
-  // 4) Pompa
+  // 5) Pompa
   if (typeof latest.pump === "boolean") {
     list.push({
       id: "pump",
@@ -202,7 +301,7 @@ export function buildInsights(
     });
   }
 
-  // 5) Status tanaman (teks)
+  // 6) Status tanaman (teks)
   if (latest.status !== null && latest.status !== undefined && latest.status !== "") {
     const tone = plantStatusTone(latest.status);
     list.push({

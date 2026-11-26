@@ -10,6 +10,8 @@ import {
   readingValue,
   type SensorKey,
 } from "@/lib/sensors";
+import { sensorStatus } from "@/lib/insights";
+import { AIR_TONE_STYLE } from "@/components/dashboard/air-tone";
 import { ClockIcon } from "@/components/dashboard/icons";
 import { containerVariants, itemVariants } from "@/components/dashboard/motion-variants";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
@@ -36,6 +38,8 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
   const description = SENSOR_DESCRIPTIONS[sensorKey];
   const latest = readingValue(live.latest, sensorKey);
   const isStatus = sensorKey === "status";
+  const status = sensorStatus(sensorKey, latest);
+  const toneStyle = AIR_TONE_STYLE[status.tone];
 
   const readings = [...live.readings].reverse().slice(0, 6);
 
@@ -93,6 +97,14 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
           >
             {formatSensorValue(latest, sensorKey)}
           </motion.p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${toneStyle.badge}`}
+            >
+              {status.badge}
+            </span>
+            <span className="text-xs text-forest-mist/60">{status.hint}</span>
+          </div>
           <div className="mt-auto pt-8">
             <div className="flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-xs text-forest-mist/80 shadow-glass-inset">
               <ClockIcon className="h-4 w-4 shrink-0 text-forest-lime" />

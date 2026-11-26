@@ -56,16 +56,16 @@ export const SENSOR_LABELS: Record<SensorKey, string> = {
 };
 
 export const SENSOR_DESCRIPTIONS: Record<SensorKey, string> = {
-  status: "Kondisi tanaman dari perangkat: Sehat / Sakit / Mati.",
-  co2_in: "CO₂ sensor gas #1 (ppm).",
-  co2_out: "CO₂ sensor gas #2 (ppm).",
-  humidity: "Kelembapan tanah dalam persentase (%).",
-  brightness: "Kecerahan lampu LED dalam persentase (0–100).",
-  fan_speed: "Kecepatan kipas dalam persentase (0–100).",
-  pump: "Status pompa air: menyala atau mati.",
-  pm1: "Partikulat halus kurang dari 1 μm (µg/m³).",
-  pm25: "Partikulat halus kurang dari 2.5 μm (µg/m³).",
-  pm10: "Partikulat kurang dari 10 μm (µg/m³).",
+  status: "Kondisi lumut menurut perangkat: Sehat, Sakit, atau Mati.",
+  co2_in: "Tingkat gas CO₂ di dalam ruangan. Makin rendah, udaranya makin segar.",
+  co2_out: "Tingkat gas CO₂ di luar ruangan sebagai pembanding.",
+  humidity: "Basah atau keringnya tanah lumut (%). Idealnya 70–90%.",
+  brightness: "Seberapa terang lampu LED menyala (0–100%).",
+  fan_speed: "Seberapa kencang kipas bekerja (0–100%).",
+  pump: "Apakah pompa air sedang menyala atau mati.",
+  pm1: "Debu sangat halus di udara. Makin rendah, makin aman untuk pernapasan.",
+  pm25: "Debu halus yang mudah masuk ke paru-paru. Makin rendah makin aman.",
+  pm10: "Debu kasar di udara. Makin rendah makin aman untuk pernapasan.",
 };
 
 export const SENSOR_UNITS: Partial<Record<SensorKey, string>> = {

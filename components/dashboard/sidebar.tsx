@@ -24,7 +24,7 @@ import { BrandLogo } from "@/components/layout/brand-logo";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: HomeIcon },
-  { href: "/dashboard/air-quality", label: "Air Quality", icon: SignalIcon },
+  { href: "/dashboard/air-quality", label: "Kualitas Udara", icon: SignalIcon },
   { href: "/dashboard/kelembapan", label: "Kelembapan", icon: DropletIcon },
   {
     href: "/dashboard/kecepatan-fan",

@@ -9,17 +9,14 @@ import {
   TONE_LABEL,
   buildInsights,
   greetingFor,
-  plantNote,
-  sensorHint,
+  sensorStatus,
   tipOfTheDay,
   type InsightTone,
 } from "@/lib/insights";
-import {
-  SENSOR_KEYS,
-  SENSOR_LABELS,
-  formatSensorValue,
-} from "@/lib/sensors";
-import { ArrowRightIcon, ClockIcon, SproutIcon } from "@/components/dashboard/icons";
+import { SENSOR_LABELS, formatSensorValue, type SensorKey } from "@/lib/sensors";
+import { overallAirQuality } from "@/lib/air-quality";
+import { AIR_TONE_STYLE } from "@/components/dashboard/air-tone";
+import { ArrowRightIcon, ClockIcon, SignalIcon, SproutIcon } from "@/components/dashboard/icons";
 import { containerVariants, itemVariants } from "@/components/dashboard/motion-variants";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { LiveStatus } from "@/components/dashboard/live-status";
@@ -49,6 +46,20 @@ const TONE_STYLE: Record<InsightTone, { card: string; chip: string }> = {
   },
 };
 
+/** Urutan kartu: udara dulu, lalu lingkungan lumut, aktuator, kondisi tanaman. */
+const OVERVIEW_KEYS: SensorKey[] = [
+  "co2_in",
+  "co2_out",
+  "pm1",
+  "pm25",
+  "pm10",
+  "humidity",
+  "brightness",
+  "fan_speed",
+  "pump",
+  "status",
+];
+
 export function Overview() {
   const session = useSession();
   const userName = session?.name ?? session?.email.split("@")[0] ?? "";
@@ -63,6 +74,8 @@ export function Overview() {
 
   const latest = live.latest;
   const plantValue = plantStatusText(latest?.status);
+  const air = overallAirQuality(latest);
+  const airStyle = AIR_TONE_STYLE[air?.level ?? "neutral"];
 
   // `now` null = sebelum mount di browser → sapaan netral agar tidak hydration mismatch.
   const greeting = now === null ? "Halo" : greetingFor(new Date(now).getHours());
@@ -93,7 +106,7 @@ export function Overview() {
             {greeting}, {userName || "Explorer"} 👋
           </h1>
           <p className="mt-1 text-sm text-forest-mist/70">
-            Ini kondisi lumut dan udara di perangkat{" "}
+            Ini kondisi udara di sekitar dan lumut di perangkat{" "}
             <span className="font-semibold text-forest-mist">{deviceId}</span>{" "}
             saat ini.
           </p>
@@ -114,34 +127,50 @@ export function Overview() {
 
       <motion.section
         variants={itemVariants}
-        className="mt-8 overflow-hidden rounded-[2rem] border border-white/20 bg-linear-to-br from-white/20 via-white/10 to-white/5 p-6 shadow-glass sm:p-9"
+        className={`mt-8 overflow-hidden rounded-[2rem] border p-6 shadow-glass sm:p-9 ${airStyle.card}`}
       >
         <div className="flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
             <p className="text-xs font-medium tracking-[0.2em] text-forest-mist/70 uppercase">
-              Status tanaman
+              Status udara di sekitar
             </p>
             <motion.p
-              key={plantValue}
+              key={air?.label ?? "Menunggu data"}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-3 text-3xl font-semibold tracking-tight break-words text-forest-mist sm:text-5xl"
             >
-              {plantValue}
+              {air?.label ?? "Menunggu data"}
             </motion.p>
-            <p className="mt-3 max-w-md text-sm leading-6 text-forest-mist/70">
-              {plantNote(latest?.status)}
+            <p className="mt-3 max-w-md text-sm leading-6 text-forest-mist/80">
+              {air?.advice ??
+                "Data sensor belum masuk. Pastikan perangkat menyala dan terhubung ke internet."}
             </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {air && (
+                <span
+                  className={`rounded-full px-3 py-1.5 text-[11px] font-semibold ${airStyle.badge}`}
+                >
+                  Penyebab utama: {air.driverLabel}{" "}
+                  {formatSensorValue(air.driverValue, air.driverKey)}
+                </span>
+              )}
+              <span className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-medium text-forest-mist/80">
+                <SproutIcon className="h-3.5 w-3.5 text-forest-lime" />
+                Kondisi lumut: {plantValue}
+              </span>
+            </div>
           </div>
           <div className="flex flex-row items-center gap-3 rounded-3xl bg-white/10 p-4 shadow-glass-sm backdrop-blur-xl sm:flex-col sm:p-5">
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/10 text-forest-mist sm:h-14 sm:w-14">
-              <SproutIcon className="h-6 w-6" />
+              <SignalIcon className="h-6 w-6" />
             </span>
             <Link
-              href="/dashboard/status-tanaman"
+              href="/dashboard/air-quality"
               className="flex items-center gap-1.5 text-xs font-semibold text-forest-mist underline decoration-forest-lime decoration-2 underline-offset-2"
             >
-              Lihat detail <ArrowRightIcon className="h-3.5 w-3.5" />
+              Lihat kualitas udara{" "}
+              <ArrowRightIcon className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
@@ -149,17 +178,22 @@ export function Overview() {
 
       <motion.section variants={itemVariants} className="mt-8">
         <p className="text-xs font-medium tracking-wide text-forest-mist/70 uppercase">
-          Pembacaan terbaru
+          Angka sensor & artinya
         </p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {SENSOR_KEYS.map((key) => (
-            <StatCard
-              key={key}
-              label={SENSOR_LABELS[key]}
-              value={formatSensorValue(latest?.[key], key)}
-              hint={sensorHint(key, latest?.[key])}
-            />
-          ))}
+          {OVERVIEW_KEYS.map((key) => {
+            const status = sensorStatus(key, latest?.[key]);
+            return (
+              <StatCard
+                key={key}
+                label={SENSOR_LABELS[key]}
+                value={formatSensorValue(latest?.[key], key)}
+                hint={status.hint}
+                tone={status.tone}
+                badge={status.badge}
+              />
+            );
+          })}
         </div>
       </motion.section>
 
@@ -229,7 +263,7 @@ export function Overview() {
             href="/dashboard/air-quality"
             className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-xl px-4 py-2.5 text-xs font-medium text-forest-mist shadow-glass-sm"
           >
-            <span>Air Quality</span>
+            <span>Kualitas Udara</span>
             <ArrowRightIcon className="h-3.5 w-3.5 text-forest-lime" />
           </Link>
           <Link

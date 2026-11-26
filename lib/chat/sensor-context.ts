@@ -8,6 +8,7 @@ import {
   type SensorKey,
   type SensorReading,
 } from "@/lib/sensors";
+import { sensorStatus } from "@/lib/insights";
 import { getAdminClient } from "@/lib/supabase-admin";
 
 /** Jumlah baris terakhir yang diringkas untuk chatbot. */
@@ -69,9 +70,14 @@ async function fetchReadings(deviceId: string): Promise<SensorReading[]> {
   return ((data ?? []) as SensorReading[]).slice().reverse();
 }
 
+const AIR_KEYS: SensorKey[] = ["co2_in", "co2_out", "pm1", "pm25", "pm10"];
+
 function formatLine(row: SensorReading, key: SensorKey): string {
   const value = formatSensorValue(row[key], key);
-  return `- ${SENSOR_LABELS[key]}: ${value === "—" ? "tidak ada" : value}`;
+  const status = AIR_KEYS.includes(key) ? sensorStatus(key, row[key]) : null;
+  const category =
+    status && status.badge !== "Belum ada data" ? ` (kategori ${status.badge})` : "";
+  return `- ${SENSOR_LABELS[key]}: ${value === "—" ? "tidak ada" : value}${category}`;
 }
 
 /**

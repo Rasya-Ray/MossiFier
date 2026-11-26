@@ -23,6 +23,7 @@ import Image from "next/image";
 const SUGGESTIONS = [
   "Gimana kondisi lumut sekarang?",
   "Apakah CO₂ di ruangan aman?",
+  "PM2.5 di sini aman nggak?",
   "Kelembapannya sudah ideal belum?",
   "Kenapa lumut bisa jadi coklat?",
 ];

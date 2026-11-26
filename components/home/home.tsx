@@ -17,8 +17,8 @@ import {
 const FEATURES = [
   {
     icon: SignalIcon,
-    title: "Air Quality In & Out",
-    text: "Bandingkan CO₂ dalam dan luar ruangan, plus partikulat PM1.0, PM2.5, dan PM10.",
+    title: "Kualitas Udara Dalam & Luar",
+    text: "Bandingkan CO₂ dalam dan luar ruangan, plus debu halus PM1.0, PM2.5, dan PM10.",
   },
   {
     icon: DropletIcon,
