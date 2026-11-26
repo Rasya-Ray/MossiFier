@@ -57,9 +57,9 @@ function trend(values: number[]): string {
 }
 
 /** Ambil riwayat terakhir satu device langsung dari Supabase (server-side). */
-async function fetchReadings(deviceId: number): Promise<SensorReading[]> {
+async function fetchReadings(deviceId: string): Promise<SensorReading[]> {
   const { data, error } = await getAdminClient()
-    .from("sensor_readings")
+    .from("devices")
     .select(SENSOR_COLUMNS)
     .eq("device_id", deviceId)
     .order("created_at", { ascending: false })
@@ -79,12 +79,11 @@ function formatLine(row: SensorReading, key: SensorKey): string {
  * Tidak pernah melempar error: kegagalan dilaporkan sebagai teks supaya
  * chatbot tetap bisa menjawab pertanyaan umum.
  *
- * ID device divalidasi dan kepemilikan dicek dulu — pengguna tidak bisa memaksa
- * Kibo membocorkan data device milik akun lain.
+ * ID device divalidasi dulu — kalau ID belum ada di DB, tidak ada data sensor.
  */
 export async function buildSensorContext(
   deviceId: string | null,
-  user: SessionUser,
+  _user: SessionUser,
 ): Promise<string> {
   const now = Date.now();
   const lines: string[] = [
@@ -99,22 +98,19 @@ export async function buildSensorContext(
     return lines.join("\n");
   }
 
-  const access = await findDeviceForUser(deviceId, user);
+  const access = await findDeviceForUser(deviceId, null);
   if (!access.ok) {
     lines.push(
-      "Device yang dipilih tidak bisa diakses. Jangan menebak data sensor-nya; sarankan pengguna memilih device miliknya sendiri lewat sidebar.",
+      "Device yang dipilih tidak ditemukan di database. Jangan menebak data sensor; pastikan ESP32 sudah menyala dan mengirim data.",
     );
     return lines.join("\n");
   }
 
-  lines.push(`Device aktif (ID): ${access.device.macAddress}`);
-  if (access.device.name) {
-    lines.push(`Nama device: ${access.device.name.slice(0, 60)}`);
-  }
+  lines.push(`Device aktif (ID): ${access.device.deviceId}`);
 
   let readings: SensorReading[];
   try {
-    readings = await fetchReadings(access.device.id);
+    readings = await fetchReadings(access.device.deviceId);
   } catch (error) {
     console.error("[chat/sensor-context]", error);
     lines.push(
@@ -155,9 +151,7 @@ export async function buildSensorContext(
         : `Ringkasan ${readings.length} pembacaan terakhir:`,
     );
 
-    const summaryKeys = SENSOR_KEYS.filter(
-      (key) => key !== "plant_status" && key !== "pump",
-    );
+    const summaryKeys = SENSOR_KEYS.filter((key) => key !== "pump");
     for (const key of summaryKeys) {
       const values = readings
         .map((row) => row[key])
@@ -165,7 +159,7 @@ export async function buildSensorContext(
       if (!values.length) continue;
       const min = Math.min(...values);
       const max = Math.max(...values);
-      const mean = values.reduce((s, v) => s + v, 0) / values.length;
+      const mean = values.reduce((s, v) => s + v) / values.length;
       lines.push(
         `- ${SENSOR_LABELS[key]}: min ${formatSensorValue(min, key)}, maks ${formatSensorValue(max, key)}, rata-rata ${formatSensorValue(mean, key)}, tren ${trend(values)}`,
       );

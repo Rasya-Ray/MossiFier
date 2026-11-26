@@ -4,7 +4,7 @@ import type { PublicSensorReading } from "@/lib/sensors";
  * Cache pembacaan terakhir per device di localStorage.
  * Tujuan: saat halaman dibuka ulang / koneksi putus, dashboard tetap menampilkan
  * data terakhir yang diketahui (bukan "belum ada data").
- * Cache hanya untuk tampilan; sumber kebenaran tetap `sensor_readings`.
+ * Cache hanya untuk tampilan; sumber kebenaran tetap tabel `devices`.
  */
 const STORAGE_PREFIX = "mossifier.last_readings";
 const MAX_ROWS = 20;
@@ -31,7 +31,7 @@ export function readCachedReadings(deviceId: string): CachedReadings | null {
     if (!Array.isArray(parsed.readings)) return null;
 
     const readings = parsed.readings
-      .filter((row) => Boolean(row?.id) && typeof row?.created_at === "string")
+      .filter((row) => Boolean(row?.created_at) && typeof row?.created_at === "string")
       .slice(-MAX_ROWS);
 
     if (readings.length === 0) return null;

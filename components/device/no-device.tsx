@@ -33,7 +33,7 @@ export function NoDevice({ title = "Belum ada perangkat terpilih" }: NoDevicePro
           onClick={openDialog}
           className="mt-6 rounded-full bg-forest-lime px-6 py-3 text-sm font-medium text-forest-night shadow-glass"
         >
-          Tambah Device
+          Tambah device
         </button>
       </section>
     </motion.main>

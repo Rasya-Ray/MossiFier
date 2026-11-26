@@ -1,5 +1,7 @@
 /**
- * Status tanaman dikirim perangkat sebagai KODE ANGKA:
+ * Status tanaman dikirim perangkat sebagai TEKS:
+ * "HEALTHY" / "STRESSED" / "CRITICAL".
+ * Untuk kompatibilitas, angka lama 0/1/2 masih diterima:
  * 0 = Sehat, 1 = Sakit, 2 = Mati.
  * Nilai lain / kosong ditampilkan sebagai "Belum ada data".
  */
@@ -10,28 +12,44 @@ export function plantStatusText(
     return "Belum ada data";
   }
 
-  const code = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(code)) return "Belum ada data";
+  const text = typeof value === "string" ? value.toUpperCase() : String(value);
 
-  switch (Math.trunc(code)) {
-    case 0:
+  switch (text) {
+    case "HEALTHY":
       return "Sehat";
-    case 1:
+    case "STRESSED":
       return "Sakit";
-    case 2:
+    case "CRITICAL":
       return "Mati";
     default:
-      return "Tidak diketahui";
+      const code = Number(value);
+      if (!Number.isFinite(code)) return "Belum ada data";
+      switch (Math.trunc(code)) {
+        case 0:
+          return "Sehat";
+        case 1:
+          return "Sakit";
+        case 2:
+          return "Mati";
+        default:
+          return "Tidak diketahui";
+      }
   }
 }
 
-/** Kode numerik status → tone untuk badge/insight. */
+/** Teks status → tone untuk badge/insight. */
 export function plantStatusTone(
-  value: number | null | undefined,
+  value: number | string | null | undefined,
 ): "good" | "warn" | "bad" | "info" {
   if (value === null || value === undefined) return "info";
-  if (value === 0) return "good";
-  if (value === 1) return "warn";
-  if (value === 2) return "bad";
+  const text = typeof value === "string" ? value.toUpperCase() : String(value);
+  if (text === "HEALTHY") return "good";
+  if (text === "STRESSED") return "warn";
+  if (text === "CRITICAL") return "bad";
+  const code = Number(value);
+  if (!Number.isFinite(code)) return "info";
+  if (code === 0) return "good";
+  if (code === 1) return "warn";
+  if (code === 2) return "bad";
   return "info";
 }

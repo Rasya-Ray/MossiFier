@@ -1,39 +1,50 @@
 /**
  * Validasi baris sensor dari Supabase/webhook sebelum di-cache ke Redis.
- * Kolom menyesuaikan skema baru (tabel `sensor_readings`).
+ * Sesuai skema baru: satu baris per kiriman di tabel `devices`.
  */
 
 import type { SensorReading } from "@/lib/sensors";
 
 const NUMERIC_FIELDS = [
-  "soil_moisture",
-  "mq135_1",
-  "mq135_2",
+  "co2_in",
+  "co2_out",
+  "humidity",
+  "brightness",
+  "fan_speed",
   "pm1",
   "pm25",
   "pm10",
-  "fan",
-  "led",
 ] as const;
+
+const STATUS_VALUES = ["HEALTHY", "STRESSED", "CRITICAL"];
 
 export function parseReading(value: unknown): SensorReading | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
 
-  // id UUID & created_at wajib
+  // id & created_at wajib
   if (
-    typeof row.id !== "string" ||
+    typeof row.id !== "number" ||
+    !Number.isInteger(row.id) ||
+    row.id <= 0 ||
     typeof row.created_at !== "string" ||
     Number.isNaN(Date.parse(row.created_at))
   ) {
     return null;
   }
 
-  // device_id wajib integer
-  const deviceId = Number(row.device_id);
-  if (!Number.isInteger(deviceId) || deviceId <= 0) return null;
+  // device_id wajib string MOSS-...
+  if (typeof row.device_id !== "string" || row.device_id.length === 0) return null;
 
-  // Numeric fields: null atau number finite
+  // status: null atau teks HEALTHY/STRESSED/CRITICAL
+  const status = row.status;
+  if (status !== null && status !== undefined) {
+    if (typeof status !== "string" || !STATUS_VALUES.includes(status)) {
+      return null;
+    }
+  }
+
+  // numeric fields: null atau number finite
   for (const field of NUMERIC_FIELDS) {
     const v = row[field];
     if (v !== null && v !== undefined) {
@@ -42,34 +53,40 @@ export function parseReading(value: unknown): SensorReading | null {
     }
   }
 
-  // plant_status: null atau integer 0-2
-  const ps = row.plant_status;
-  if (
-    ps !== null &&
-    ps !== undefined &&
-    (!Number.isInteger(ps) || (ps as number) < 0 || (ps as number) > 2)
-  ) {
-    return null;
-  }
-
   // pump: null atau boolean
-  if (row.pump !== null && row.pump !== undefined && typeof row.pump !== "boolean") {
+  const pump = row.pump;
+  if (pump !== null && pump !== undefined && typeof pump !== "boolean") {
     return null;
   }
 
   return {
-    id: row.id as string,
-    device_id: deviceId,
-    created_at: row.created_at as string,
-    plant_status: row.plant_status != null ? (Number(row.plant_status) as 0 | 1 | 2) : null,
-    soil_moisture: row.soil_moisture != null ? Number(row.soil_moisture) : null,
-    mq135_1: row.mq135_1 != null ? Number(row.mq135_1) : null,
-    mq135_2: row.mq135_2 != null ? Number(row.mq135_2) : null,
-    pm1: row.pm1 != null ? Number(row.pm1) : null,
-    pm25: row.pm25 != null ? Number(row.pm25) : null,
-    pm10: row.pm10 != null ? Number(row.pm10) : null,
-    pump: row.pump === true || row.pump === false ? row.pump : null,
-    fan: row.fan != null ? Number(row.fan) : null,
-    led: row.led != null ? Number(row.led) : null,
+    id: row.id,
+    device_id: row.device_id,
+    created_at: row.created_at,
+    status: status ?? null,
+    co2_in:
+      row.co2_in !== null && row.co2_in !== undefined
+        ? Number(row.co2_in)
+        : null,
+    co2_out:
+      row.co2_out !== null && row.co2_out !== undefined
+        ? Number(row.co2_out)
+        : null,
+    humidity:
+      row.humidity !== null && row.humidity !== undefined
+        ? Number(row.humidity)
+        : null,
+    brightness:
+      row.brightness !== null && row.brightness !== undefined
+        ? Number(row.brightness)
+        : null,
+    fan_speed:
+      row.fan_speed !== null && row.fan_speed !== undefined
+        ? Number(row.fan_speed)
+        : null,
+    pump: pump ?? null,
+    pm1: row.pm1 !== null && row.pm1 !== undefined ? Number(row.pm1) : null,
+    pm25: row.pm25 !== null && row.pm25 !== undefined ? Number(row.pm25) : null,
+    pm10: row.pm10 !== null && row.pm10 !== undefined ? Number(row.pm10) : null,
   };
 }

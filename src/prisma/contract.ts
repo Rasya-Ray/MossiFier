@@ -5,14 +5,13 @@ import {
   gen,
   model,
   now,
-  rel,
   rlsEnabled,
   sql,
   type,
 } from '@prisma/orm-postgres/contract-builder';
 
 // ============================================================
-// Tabel 1: users — akun login / register (sudah ada, tidak berubah)
+// Tabel 1: users — akun login / register (tetap, tidak berubah)
 // ============================================================
 const User = model('User', {
   fields: {
@@ -25,70 +24,36 @@ const User = model('User', {
 }).sql({ table: 'users' });
 
 // ============================================================
-// Tabel 2: devices — identitas perangkat. Kolom `mac_address` menyimpan ID
-// penuh berformat MOSS-<MAC 12 hex> (unik).
+// Tabel 2: devices — identitas + data sensor terakhir (1 baris/POST)
+// Kolom sesuai payload ESP32 langsung, tanpa FK/upsert/unique.
 // ============================================================
 const Device = model('Device', {
   fields: {
     id: field.column(type.Int()).id().default(autoincrement()),
-    mac_address: field.column(type.String()).unique(),
-    user_id: field.column(type.Uuid()).optional(),
-    name: field.column(type.String()).optional(),
-    claimed_at: field.column(type.DateTime()).optional(),
+    device_id: field.column(type.String()),
+    status: field.column(type.String()).optional(),
+    co2_in: field.column(type.Int()).optional(),
+    co2_out: field.column(type.Int()).optional(),
+    humidity: field.column(type.Float({ storage: 'float4' })).optional(),
+    brightness: field.column(type.Float({ storage: 'float4' })).optional(),
+    fan_speed: field.column(type.Float({ storage: 'float4' })).optional(),
+    pm1: field.column(type.Float({ storage: 'float4' })).optional(),
+    pm25: field.column(type.Float({ storage: 'float4' })).optional(),
+    pm10: field.column(type.Float({ storage: 'float4' })).optional(),
+    pump: field.column(type.Boolean()).optional(),
     created_at: field.column(type.DateTime()).default(now()).onCreate(gen.now()),
-  },
-  relations: {
-    owner: rel.belongsTo(User, { from: 'user_id', to: 'id' }).sql({ fk: { constraint: true } }),
   },
 }).sql(({ cols, constraints }) => ({
   table: 'devices',
   indexes: [
-    constraints.index([cols.user_id], { name: 'devices_owner' }),
+    constraints.index([cols.device_id, cols.created_at], { name: 'devices_device_created_desc' }),
   ],
 }));
 
-// ============================================================
-// Tabel 3: sensor_readings — riwayat sensor (1 baris per kiriman)
-// ============================================================
-const SensorReading = model('SensorReading', {
-  fields: {
-    id: field
-      .column(type.Uuid())
-      .id()
-      .default(sql`gen_random_uuid()`)
-      .onCreate(gen.uuid(7)),
-    device_id: field.column(type.Int()),
-    created_at: field.column(type.DateTime()).default(now()).onCreate(gen.now()),
-    plant_status: field.column(type.Int()).optional(),
-    soil_moisture: field.column(type.Float({ storage: 'float4' })).optional(),
-    mq135_1: field.column(type.Int()).optional(),
-    mq135_2: field.column(type.Int()).optional(),
-    pm1: field.column(type.Int()).optional(),
-    pm25: field.column(type.Int()).optional(),
-    pm10: field.column(type.Int()).optional(),
-    pump: field.column(type.Boolean()).optional(),
-    // Persentase 0–100 (bukan boolean)
-    fan: field.column(type.Float({ storage: 'float4' })).optional(),
-    led: field.column(type.Float({ storage: 'float4' })).optional(),
-  },
-  relations: {
-    device: rel.belongsTo(Device, { from: 'device_id', to: 'id' }).sql({ fk: { constraint: true } }),
-  },
-}).sql(({ cols, constraints }) => ({
-  table: 'sensor_readings',
-  indexes: [
-    constraints.index([cols.device_id, cols.created_at], { name: 'sensor_readings_device_desc' }),
-  ],
-}));
-
-// ============================================================
-// Kontrak — FK constraint fisik + RLS
-// ============================================================
 export const contract = defineContract({
-  entities: [rlsEnabled(Device), rlsEnabled(SensorReading)],
+  entities: [rlsEnabled(Device)],
   models: {
     User,
     Device,
-    SensorReading,
   },
 });

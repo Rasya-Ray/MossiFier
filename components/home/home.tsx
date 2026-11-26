@@ -18,7 +18,7 @@ const FEATURES = [
   {
     icon: SignalIcon,
     title: "Air Quality In & Out",
-    text: "Bandingkan kualitas udara dan CO₂ di dalam dan luar ruangan, sekaligus.",
+    text: "Bandingkan CO₂ dalam dan luar ruangan, plus partikulat PM1.0, PM2.5, dan PM10.",
   },
   {
     icon: DropletIcon,
@@ -42,8 +42,8 @@ const FEATURES = [
   },
   {
     icon: LeafIcon,
-    title: "Data realtime",
-    text: "Data baru dari perangkat muncul di layar seketika, tanpa perlu refresh.",
+    title: "Pembaruan otomatis",
+    text: "Data baru dari perangkat muncul sendiri di layar, tanpa perlu refresh.",
   },
 ];
 
@@ -96,7 +96,7 @@ export function Home() {
             variants={itemVariants}
             className="mx-auto mt-5 max-w-xl text-sm leading-7 text-forest-mist/70 sm:text-base"
           >
-            Mossifier membaca sensor di sekitar lumutmu — kualitas udara, CO₂,
+            Mossifier membaca sensor di sekitar lumutmu — CO₂, partikulat,
             kelembapan, dan cahaya — lalu menampilkannya dalam dashboard yang
             mudah dipahami. Ada Kibo juga untuk membantu menjelaskan angkanya.
           </motion.p>

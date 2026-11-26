@@ -62,7 +62,7 @@ export function Overview() {
   if (live.isFetching && !live.latest) return <DashboardSkeleton />;
 
   const latest = live.latest;
-  const plantValue = plantStatusText(latest?.plant_status);
+  const plantValue = plantStatusText(latest?.status);
 
   // `now` null = sebelum mount di browser → sapaan netral agar tidak hydration mismatch.
   const greeting = now === null ? "Halo" : greetingFor(new Date(now).getHours());
@@ -130,7 +130,7 @@ export function Overview() {
               {plantValue}
             </motion.p>
             <p className="mt-3 max-w-md text-sm leading-6 text-forest-mist/70">
-              {plantNote(latest?.plant_status)}
+              {plantNote(latest?.status)}
             </p>
           </div>
           <div className="flex flex-row items-center gap-3 rounded-3xl bg-white/10 p-4 shadow-glass-sm backdrop-blur-xl sm:flex-col sm:p-5">

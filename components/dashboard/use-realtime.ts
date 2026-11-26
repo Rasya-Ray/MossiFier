@@ -12,7 +12,7 @@ import { useDevice } from "@/components/device/device-provider";
 export const HISTORY_LIMIT = 20;
 
 /**
- * Tabel `sensor_readings` memakai RLS tanpa policy anon, jadi browser tidak
+ * Tabel `devices` memakai RLS tanpa policy anon, jadi browser tidak
  * bisa query langsung / berlangganan Realtime. Dashboard memakai API server
  * (service role). Supaya data tetap segar tanpa refresh, riwayat ditarik
  * berkala dari `/api/readings/history`.
@@ -43,11 +43,11 @@ const EMPTY_STATUS: DeviceStatus = {
 
 /** Query riwayat terakhir untuk grafik (lewat API server). */
 async function loadReadings(
-  macAddress: string,
+  deviceId: string,
   limit: number,
 ): Promise<PublicSensorReading[]> {
   const response = await fetch(
-    `/api/readings/history?macAddress=${encodeURIComponent(macAddress)}&limit=${limit}`,
+    `/api/readings/history?deviceId=${encodeURIComponent(deviceId)}&limit=${limit}`,
     { cache: "no-store" },
   );
   if (!response.ok) throw new Error("history unavailable");
@@ -68,16 +68,16 @@ function mergeReadings(
   incoming: PublicSensorReading[],
   limit: number,
 ): PublicSensorReading[] {
-  const byId = new Map<string, PublicSensorReading>();
-  for (const row of current) byId.set(row.id, row);
-  for (const row of incoming) byId.set(row.id, row);
-  return [...byId.values()]
+  const byCreated = new Map<string, PublicSensorReading>();
+  for (const row of current) byCreated.set(row.created_at, row);
+  for (const row of incoming) byCreated.set(row.created_at, row);
+  return [...byCreated.values()]
     .sort((a, b) => readingTime(a) - readingTime(b))
     .slice(-limit);
 }
 
 /**
- * Data sensor device aktif (MAC):
+ * Data sensor device aktif (device_id):
  * 1. Tampilkan cache browser jika ada.
  * 2. Ambil satu pembacaan terakhir melalui API (Redis-first).
  * 3. Ambil 20 baris riwayat lewat API server untuk grafik.
@@ -183,11 +183,6 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
     load(false);
   }, [deviceId, load, patchStatus]);
 
-  /*
-   * localStorage tidak tersedia di server. Kalau cache dibaca langsung saat
-   * render, server menghasilkan skeleton sementara client langsung menampilkan
-   * data → hydration mismatch. Cache dibaca setelah mount.
-   */
   useEffect(() => {
     if (!deviceId) return;
     const cached = readCachedReadings(deviceId);
@@ -208,7 +203,7 @@ export function useRealtimeSensors(limit = HISTORY_LIMIT): SensorLiveState {
 
     // Baca satu pembacaan terakhir dari Redis dulu (cepat), lalu riwayat.
     void fetch(
-      `/api/readings/latest?macAddress=${encodeURIComponent(deviceId)}`,
+      `/api/readings/latest?deviceId=${encodeURIComponent(deviceId)}`,
       { cache: "no-store" },
     )
       .then(async (response) => {

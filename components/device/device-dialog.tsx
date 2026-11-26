@@ -27,9 +27,9 @@ export function DeviceDialog({ open, current, onClose }: DeviceDialogProps) {
     if (saving) return;
 
     const raw = new FormData(event.currentTarget).get("mac_address");
-    const macAddress = normalizeDeviceId(raw);
+    const deviceId = normalizeDeviceId(raw);
 
-    if (!macAddress) {
+    if (!deviceId) {
       toast.error(
         `ID device harus berformat MOSS- diikuti MAC 12 hex (contoh: ${DEVICE_ID_EXAMPLE}).`,
       );
@@ -38,22 +38,22 @@ export function DeviceDialog({ open, current, onClose }: DeviceDialogProps) {
 
     setSaving(true);
     try {
-      const response = await fetch("/api/device/claim", {
+      const response = await fetch("/api/device/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ macAddress }),
+        body: JSON.stringify({ deviceId }),
       });
       const result = (await response.json().catch(() => null)) as
         | { error?: string }
         | null;
 
       if (!response.ok) {
-        toast.error(result?.error ?? "Gagal mengklaim device.");
+        toast.error(result?.error ?? "Gagal memvalidasi device.");
         return;
       }
 
-      saveDeviceId(macAddress, session?.id ?? null);
-      toast.success(`Device ${macAddress} siap dipakai.`);
+      saveDeviceId(deviceId, session?.id ?? null);
+      toast.success(`Device ${deviceId} siap dipakai.`);
       onClose();
     } catch {
       toast.error("Koneksi gagal. Coba lagi.");

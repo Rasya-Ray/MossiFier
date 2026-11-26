@@ -8,10 +8,6 @@
       "model": "Device",
       "namespace": "public"
     },
-    "sensor_readings": {
-      "model": "SensorReading",
-      "namespace": "public"
-    },
     "users": {
       "model": "User",
       "namespace": "public"
@@ -23,100 +19,27 @@
         "models": {
           "Device": {
             "fields": {
-              "claimed_at": {
+              "brightness": {
                 "nullable": true,
                 "type": {
-                  "codecId": "pg/timestamptz-date@1",
-                  "kind": "scalar",
-                  "typeParams": {
-                    "precision": 3
-                  }
+                  "codecId": "pg/float4@1",
+                  "kind": "scalar"
                 }
               },
-              "created_at": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/timestamptz-date@1",
-                  "kind": "scalar",
-                  "typeParams": {
-                    "precision": 3
-                  }
-                }
-              },
-              "id": {
-                "nullable": false,
+              "co2_in": {
+                "nullable": true,
                 "type": {
                   "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
               },
-              "mac_address": {
-                "nullable": false,
+              "co2_out": {
+                "nullable": true,
                 "type": {
-                  "codecId": "pg/text@1",
+                  "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
               },
-              "name": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                }
-              },
-              "user_id": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/uuid@1",
-                  "kind": "scalar"
-                }
-              }
-            },
-            "relations": {
-              "owner": {
-                "cardinality": "N:1",
-                "nullable": true,
-                "on": {
-                  "localFields": [
-                    "user_id"
-                  ],
-                  "targetFields": [
-                    "id"
-                  ]
-                },
-                "to": {
-                  "model": "User",
-                  "namespace": "public"
-                }
-              }
-            },
-            "storage": {
-              "fields": {
-                "claimed_at": {
-                  "column": "claimed_at"
-                },
-                "created_at": {
-                  "column": "created_at"
-                },
-                "id": {
-                  "column": "id"
-                },
-                "mac_address": {
-                  "column": "mac_address"
-                },
-                "name": {
-                  "column": "name"
-                },
-                "user_id": {
-                  "column": "user_id"
-                }
-              },
-              "namespaceId": "public",
-              "table": "devices"
-            }
-          },
-          "SensorReading": {
-            "fields": {
               "created_at": {
                 "nullable": false,
                 "type": {
@@ -130,11 +53,18 @@
               "device_id": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/int4@1",
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
-              "fan": {
+              "fan_speed": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/float4@1",
+                  "kind": "scalar"
+                }
+              },
+              "humidity": {
                 "nullable": true,
                 "type": {
                   "codecId": "pg/float4@1",
@@ -144,34 +74,6 @@
               "id": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/uuid@1",
-                  "kind": "scalar"
-                }
-              },
-              "led": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/float4@1",
-                  "kind": "scalar"
-                }
-              },
-              "mq135_1": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/int4@1",
-                  "kind": "scalar"
-                }
-              },
-              "mq135_2": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/int4@1",
-                  "kind": "scalar"
-                }
-              },
-              "plant_status": {
-                "nullable": true,
-                "type": {
                   "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
@@ -179,21 +81,21 @@
               "pm1": {
                 "nullable": true,
                 "type": {
-                  "codecId": "pg/int4@1",
+                  "codecId": "pg/float4@1",
                   "kind": "scalar"
                 }
               },
               "pm10": {
                 "nullable": true,
                 "type": {
-                  "codecId": "pg/int4@1",
+                  "codecId": "pg/float4@1",
                   "kind": "scalar"
                 }
               },
               "pm25": {
                 "nullable": true,
                 "type": {
-                  "codecId": "pg/int4@1",
+                  "codecId": "pg/float4@1",
                   "kind": "scalar"
                 }
               },
@@ -204,57 +106,40 @@
                   "kind": "scalar"
                 }
               },
-              "soil_moisture": {
+              "status": {
                 "nullable": true,
                 "type": {
-                  "codecId": "pg/float4@1",
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               }
             },
-            "relations": {
-              "device": {
-                "cardinality": "N:1",
-                "nullable": false,
-                "on": {
-                  "localFields": [
-                    "device_id"
-                  ],
-                  "targetFields": [
-                    "id"
-                  ]
-                },
-                "to": {
-                  "model": "Device",
-                  "namespace": "public"
-                }
-              }
-            },
+            "relations": {},
             "storage": {
               "fields": {
+                "brightness": {
+                  "column": "brightness"
+                },
+                "co2_in": {
+                  "column": "co2_in"
+                },
+                "co2_out": {
+                  "column": "co2_out"
+                },
                 "created_at": {
                   "column": "created_at"
                 },
                 "device_id": {
                   "column": "device_id"
                 },
-                "fan": {
-                  "column": "fan"
+                "fan_speed": {
+                  "column": "fan_speed"
+                },
+                "humidity": {
+                  "column": "humidity"
                 },
                 "id": {
                   "column": "id"
-                },
-                "led": {
-                  "column": "led"
-                },
-                "mq135_1": {
-                  "column": "mq135_1"
-                },
-                "mq135_2": {
-                  "column": "mq135_2"
-                },
-                "plant_status": {
-                  "column": "plant_status"
                 },
                 "pm1": {
                   "column": "pm1"
@@ -268,12 +153,12 @@
                 "pump": {
                   "column": "pump"
                 },
-                "soil_moisture": {
-                  "column": "soil_moisture"
+                "status": {
+                  "column": "status"
                 }
               },
               "namespaceId": "public",
-              "table": "sensor_readings"
+              "table": "devices"
             }
           },
           "User": {
@@ -353,107 +238,26 @@
               "kind": "rls",
               "namespaceId": "public",
               "tableName": "devices"
-            },
-            "sensor_readings": {
-              "kind": "rls",
-              "namespaceId": "public",
-              "tableName": "sensor_readings"
             }
           },
           "table": {
             "devices": {
               "columns": {
-                "claimed_at": {
-                  "codecId": "pg/timestamptz-date@1",
-                  "dataType": "pg/timestamptz",
-                  "nullable": true,
-                  "typeParams": {
-                    "precision": 3
-                  }
+                "brightness": {
+                  "codecId": "pg/float4@1",
+                  "dataType": "pg/float4",
+                  "nullable": true
                 },
-                "created_at": {
-                  "codecId": "pg/timestamptz-date@1",
-                  "dataType": "pg/timestamptz",
-                  "default": {
-                    "expression": "now()",
-                    "kind": "function"
-                  },
-                  "nullable": false,
-                  "typeParams": {
-                    "precision": 3
-                  }
-                },
-                "id": {
+                "co2_in": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
-                  "default": {
-                    "expression": "autoincrement()",
-                    "kind": "function"
-                  },
-                  "nullable": false
-                },
-                "mac_address": {
-                  "codecId": "pg/text@1",
-                  "dataType": "pg/text",
-                  "nullable": false
-                },
-                "name": {
-                  "codecId": "pg/text@1",
-                  "dataType": "pg/text",
                   "nullable": true
                 },
-                "user_id": {
-                  "codecId": "pg/uuid@1",
-                  "dataType": "pg/uuid",
+                "co2_out": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "nullable": true
-                }
-              },
-              "foreignKeys": [
-                {
-                  "index": {
-                    "name": "devices_owner_6c952402"
-                  },
-                  "source": {
-                    "columns": [
-                      "user_id"
-                    ],
-                    "namespaceId": "public",
-                    "tableName": "devices"
-                  },
-                  "target": {
-                    "columns": [
-                      "id"
-                    ],
-                    "namespaceId": "public",
-                    "tableName": "users"
-                  }
-                }
-              ],
-              "indexes": [
-                {
-                  "columns": [
-                    "user_id"
-                  ],
-                  "name": "devices_owner_6c952402",
-                  "prefix": "devices_owner",
-                  "unique": false
-                }
-              ],
-              "primaryKey": {
-                "columns": [
-                  "id"
-                ]
-              },
-              "uniques": [
-                {
-                  "columns": [
-                    "mac_address"
-                  ]
-                }
-              ]
-            },
-            "sensor_readings": {
-              "columns": {
+                },
                 "created_at": {
                   "codecId": "pg/timestamptz-date@1",
                   "dataType": "pg/timestamptz",
@@ -467,57 +271,42 @@
                   }
                 },
                 "device_id": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
                   "nullable": false
                 },
-                "fan": {
+                "fan_speed": {
+                  "codecId": "pg/float4@1",
+                  "dataType": "pg/float4",
+                  "nullable": true
+                },
+                "humidity": {
                   "codecId": "pg/float4@1",
                   "dataType": "pg/float4",
                   "nullable": true
                 },
                 "id": {
-                  "codecId": "pg/uuid@1",
-                  "dataType": "pg/uuid",
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
                   "default": {
-                    "expression": "gen_random_uuid()",
+                    "expression": "autoincrement()",
                     "kind": "function"
                   },
                   "nullable": false
                 },
-                "led": {
+                "pm1": {
                   "codecId": "pg/float4@1",
                   "dataType": "pg/float4",
                   "nullable": true
                 },
-                "mq135_1": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
-                  "nullable": true
-                },
-                "mq135_2": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
-                  "nullable": true
-                },
-                "plant_status": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
-                  "nullable": true
-                },
-                "pm1": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
-                  "nullable": true
-                },
                 "pm10": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
+                  "codecId": "pg/float4@1",
+                  "dataType": "pg/float4",
                   "nullable": true
                 },
                 "pm25": {
-                  "codecId": "pg/int4@1",
-                  "dataType": "pg/int4",
+                  "codecId": "pg/float4@1",
+                  "dataType": "pg/float4",
                   "nullable": true
                 },
                 "pump": {
@@ -525,49 +314,21 @@
                   "dataType": "pg/bool",
                   "nullable": true
                 },
-                "soil_moisture": {
-                  "codecId": "pg/float4@1",
-                  "dataType": "pg/float4",
+                "status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
                   "nullable": true
                 }
               },
-              "foreignKeys": [
-                {
-                  "index": {
-                    "name": "sensor_readings_device_id_idx_8f329912"
-                  },
-                  "source": {
-                    "columns": [
-                      "device_id"
-                    ],
-                    "namespaceId": "public",
-                    "tableName": "sensor_readings"
-                  },
-                  "target": {
-                    "columns": [
-                      "id"
-                    ],
-                    "namespaceId": "public",
-                    "tableName": "devices"
-                  }
-                }
-              ],
+              "foreignKeys": [],
               "indexes": [
                 {
                   "columns": [
                     "device_id",
                     "created_at"
                   ],
-                  "name": "sensor_readings_device_desc_722ed4f4",
-                  "prefix": "sensor_readings_device_desc",
-                  "unique": false
-                },
-                {
-                  "columns": [
-                    "device_id"
-                  ],
-                  "name": "sensor_readings_device_id_idx_8f329912",
-                  "prefix": "sensor_readings_device_id_idx",
+                  "name": "devices_device_created_desc_722ed4f4",
+                  "prefix": "devices_device_created_desc",
                   "unique": false
                 }
               ],
@@ -634,10 +395,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "71a949ee56942a2ad95b192fdcfab793dd79615a8c289f927444a5f5c4bcfbad"
+    "storageHash": "8b894c3036bee143c53cf74ced3918abded65ca6f58f0390987c05cf5a0b0365"
   },
   "execution": {
-    "executionHash": "34fdceafe2648e6ebaf0c7f68828f0aa9e5f075078373d0aef4f67d33e745fdf",
+    "executionHash": "84a7d2371b1bfaf8ecb4f1d39574efeca3b484950342930fcd0106e16b36f96d",
     "mutations": {
       "defaults": [
         {
@@ -651,31 +412,6 @@
           "ref": {
             "entry": "devices",
             "field": "created_at",
-            "namespace": "public"
-          }
-        },
-        {
-          "onCreate": {
-            "id": "timestampNow",
-            "kind": "generator",
-            "params": {
-              "precision": 3
-            }
-          },
-          "ref": {
-            "entry": "sensor_readings",
-            "field": "created_at",
-            "namespace": "public"
-          }
-        },
-        {
-          "onCreate": {
-            "id": "uuidv7",
-            "kind": "generator"
-          },
-          "ref": {
-            "entry": "sensor_readings",
-            "field": "id",
             "namespace": "public"
           }
         },

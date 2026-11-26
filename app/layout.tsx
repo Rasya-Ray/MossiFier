@@ -24,13 +24,14 @@ export const metadata: Metadata = {
     template: "%s | Mossifier",
   },
   description:
-    "Dashboard monitoring IoT real-time untuk kualitas udara, kelembapan, kipas, LED, dan kondisi tanaman berbasis Supabase.",
+    "Dashboard monitoring IoT real-time untuk kualitas udara (CO₂ & partikulat), kelembapan, kipas, LED, dan kondisi tanaman berbasis Supabase.",
   keywords: [
     "Mossifier",
     "IoT dashboard",
     "Supabase",
     "monitoring tanaman",
     "sensor kualitas udara",
+    "sensor partikulat",
   ],
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },

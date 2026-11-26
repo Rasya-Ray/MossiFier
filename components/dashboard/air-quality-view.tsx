@@ -13,7 +13,7 @@ import { useRealtimeSensors } from "@/components/dashboard/use-realtime";
 import { useDevice } from "@/components/device/device-provider";
 import { NoDevice } from "@/components/device/no-device";
 
-/** Air Quality = MQ-135 (2 sensor) + partikulat PM1.0 / PM2.5 / PM10. */
+/** Air Quality = CO₂ in/out dari sensor gas + partikulat PM1.0/PM2.5/PM10. */
 export function AirQualityView() {
   const { deviceId, ready } = useDevice();
   const live = useRealtimeSensors();
@@ -43,8 +43,8 @@ export function AirQualityView() {
             Air Quality
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-6 text-forest-mist/70">
-            Pembacaan dua sensor gas MQ-135 dan partikulat halus (PM1.0, PM2.5,
-            PM10) di sekitar perangkat.
+            Pembacaan kualitas udara dari sensor gas dan partikulat: CO₂ in,
+            CO₂ out, PM1.0, PM2.5, dan PM10.
           </p>
         </div>
         <LiveStatus
@@ -57,44 +57,44 @@ export function AirQualityView() {
 
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          label="MQ-135 #1"
-          value={formatSensorValue(latest?.mq135_1, "mq135_1")}
-          hint="Sensor gas utama"
+          label="CO₂ In"
+          value={formatSensorValue(latest?.co2_in, "co2_in")}
+          hint="Dibaca dari sensor gas MQ-135 #1"
         />
         <StatCard
-          label="MQ-135 #2"
-          value={formatSensorValue(latest?.mq135_2, "mq135_2")}
-          hint="Sensor gas kedua"
-        />
-        <StatCard
-          label="PM2.5"
-          value={formatSensorValue(latest?.pm25, "pm25")}
-          hint="Partikel halus < 2.5 µm"
+          label="CO₂ Out"
+          value={formatSensorValue(latest?.co2_out, "co2_out")}
+          hint="Dibaca dari sensor gas MQ-135 #2"
         />
         <StatCard
           label="PM1.0"
           value={formatSensorValue(latest?.pm1, "pm1")}
-          hint="Partikel ultra halus"
+          hint="Partikulat < 1 μm (µg/m³)"
+        />
+        <StatCard
+          label="PM2.5"
+          value={formatSensorValue(latest?.pm25, "pm25")}
+          hint="Partikulat halus < 2.5 μm (µg/m³)"
         />
         <StatCard
           label="PM10"
           value={formatSensorValue(latest?.pm10, "pm10")}
-          hint="Partikel < 10 µm"
+          hint="Partikulat < 10 μm (µg/m³)"
         />
       </div>
 
       <div className="mt-5">
         <TrendChart
-          title="Perbandingan PM2.5 vs PM10"
+          title="CO₂ In vs CO₂ Out"
           subtitle="Riwayat terkini"
           series={[
             {
-              name: "PM2.5",
-              values: live.readings.map((reading) => reading.pm25),
+              name: "CO₂ In",
+              values: live.readings.map((reading) => reading.co2_in),
             },
             {
-              name: "PM10",
-              values: live.readings.map((reading) => reading.pm10),
+              name: "CO₂ Out",
+              values: live.readings.map((reading) => reading.co2_out),
             },
           ]}
         />

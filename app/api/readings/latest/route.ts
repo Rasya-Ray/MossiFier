@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { findDeviceByIdForUser, findDeviceForUser } from "@/lib/device-access";
+import { findDeviceForUser } from "@/lib/device-access";
 import { getCachedLatest, setCachedLatest } from "@/lib/redis";
 import { parseReading } from "@/lib/readings/validation";
 import {
@@ -25,19 +25,20 @@ function jsonResponse(body: LatestReadingResponse, status = 200) {
   });
 }
 
-/** Jangan pernah kirim `devices.id` ke browser. */
+/** Jangan pernah kirim `id` / `device_id` internal ke browser. */
 function toPublic(reading: SensorReading): PublicSensorReading {
-  const { device_id: _deviceId, ...rest } = reading;
+  const { id: _id, device_id: _deviceId, ...rest } = reading;
+  void _id;
   void _deviceId;
   return rest;
 }
 
-/** Fallback: 1 baris terbaru dari tabel sensor_readings (server-side). */
+/** Fallback: 1 baris terbaru dari tabel devices (server-side). */
 async function fetchLatestFromSupabase(
-  deviceId: number,
+  deviceId: string,
 ): Promise<SensorReading | null> {
   const { data, error } = await getAdminClient()
-    .from("sensor_readings")
+    .from("devices")
     .select(SENSOR_COLUMNS)
     .eq("device_id", deviceId)
     .order("created_at", { ascending: false })
@@ -49,37 +50,38 @@ async function fetchLatestFromSupabase(
 }
 
 /**
- * GET /api/readings/latest?macAddress=MOSS-B0A7322B0960
+ * GET /api/readings/latest?deviceId=MOSS-B0A7322B0960
  * Redis-first; kalau kosong, ambil satu baris terbaru dari Supabase.
  */
 export async function GET(request: Request) {
   const user = await getSession();
   if (!user) return jsonError("Silakan masuk dulu.", 401);
 
-  const macAddress = new URL(request.url).searchParams.get("macAddress");
-  const access = await findDeviceForUser(macAddress, user);
+  const deviceId = new URL(request.url).searchParams.get("deviceId");
+  const access = await findDeviceForUser(deviceId, user);
   if (!access.ok) return jsonError(access.error, access.status);
 
-  const { id: deviceId, macAddress: mac } = access.device;
+  const { deviceId: did } = access.device;
 
-  const cached = await getCachedLatest(deviceId);
+  const cached = await getCachedLatest(did);
   if (cached) {
-    const { cached_at, device_id: _deviceId, ...reading } = cached;
+    const { id: _id, device_id: _deviceId, cached_at, ...reading } = cached;
+    void _id;
     void _deviceId;
     return jsonResponse({
       reading,
-      macAddress: mac,
+      deviceId: did,
       source: "redis",
       cachedAt: cached_at,
     });
   }
 
   try {
-    const reading = await fetchLatestFromSupabase(deviceId);
+    const reading = await fetchLatestFromSupabase(did);
     if (!reading) {
       return jsonResponse({
         reading: null,
-        macAddress: mac,
+        deviceId: did,
         source: "none",
         cachedAt: null,
       });
@@ -88,15 +90,12 @@ export async function GET(request: Request) {
     const stored = await setCachedLatest(reading);
     return jsonResponse({
       reading: toPublic(reading),
-      macAddress: mac,
+      deviceId: did,
       source: "supabase",
       cachedAt: stored ? Date.now() : null,
     });
   } catch (error) {
-    console.error(
-      "[readings/latest] gagal:",
-      error instanceof Error ? error.message : error,
-    );
+    console.error("[readings/latest] gagal:", error);
     return jsonError("Data terakhir belum bisa dimuat.", 503);
   }
 }
@@ -104,7 +103,6 @@ export async function GET(request: Request) {
 /**
  * POST /api/readings/latest
  * Dipakai untuk menulis cache dari event pembacaan (cadangan webhook).
- * device_id internal diverifikasi kepemilikannya sebelum ditulis ke Redis.
  */
 export async function POST(request: Request) {
   const user = await getSession();
@@ -114,7 +112,7 @@ export async function POST(request: Request) {
   const reading = parseReading(body);
   if (!reading) return jsonError("Format pembacaan sensor tidak valid.", 400);
 
-  const access = await findDeviceByIdForUser(reading.device_id, user);
+  const access = await findDeviceForUser(reading.device_id, user);
   if (!access.ok) return jsonError(access.error, access.status);
 
   const stored = await setCachedLatest(reading);

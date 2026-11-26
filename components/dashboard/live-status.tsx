@@ -13,7 +13,7 @@ type LiveStatusProps = {
   error?: string | null;
 };
 
-/** Indikator data realtime dari Supabase (push, bukan polling). */
+/** Indikator kesegaran data (ditarik ulang otomatis tiap 10 detik). */
 export function LiveStatus({
   isFetching = false,
   lastUpdated,
@@ -39,10 +39,10 @@ export function LiveStatus({
       <div
         title={
           error
-            ? "Koneksi realtime terputus; nilai terakhir tetap ditampilkan"
+            ? "Gagal memperbarui data; nilai terakhir tetap ditampilkan"
             : isStale
               ? "Data terakhir perangkat lebih dari 10 menit lalu"
-              : "Supabase Realtime — data baru langsung masuk tanpa polling"
+              : "Data diperbarui otomatis setiap 10 detik"
         }
         className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-xl px-3 py-2 text-[11px] text-forest-mist/70 shadow-glass-sm"
       >
@@ -64,7 +64,7 @@ export function LiveStatus({
           {error ? "OFFLINE" : isStale ? "DATA TERAKHIR" : "LIVE"}
         </span>
         <span className="text-forest-mist/50">
-          · {isStale ? "perangkat mungkin offline" : "realtime"}
+          · {isStale ? "perangkat mungkin offline" : "otomatis"}
         </span>
         <span className="text-forest-mist/50">· cek {checkedAt}</span>
 

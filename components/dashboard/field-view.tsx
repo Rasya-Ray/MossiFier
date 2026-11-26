@@ -8,7 +8,7 @@ import {
   formatSensorValue,
   historyValues,
   readingValue,
-  type SensorFieldKey,
+  type SensorKey,
 } from "@/lib/sensors";
 import { ClockIcon } from "@/components/dashboard/icons";
 import { containerVariants, itemVariants } from "@/components/dashboard/motion-variants";
@@ -20,7 +20,7 @@ import { useDevice } from "@/components/device/device-provider";
 import { NoDevice } from "@/components/device/no-device";
 
 type FieldViewProps = {
-  sensorKey: SensorFieldKey;
+  sensorKey: SensorKey;
   subtitle?: string;
 };
 
@@ -35,7 +35,7 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
   const title = SENSOR_LABELS[sensorKey];
   const description = SENSOR_DESCRIPTIONS[sensorKey];
   const latest = readingValue(live.latest, sensorKey);
-  const isStatus = sensorKey === "plant_status";
+  const isStatus = sensorKey === "status";
 
   const readings = [...live.readings].reverse().slice(0, 6);
 
@@ -130,9 +130,9 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
-            {readings.map((reading) => (
+            {readings.map((reading, index) => (
               <li
-                key={reading.id}
+                key={index}
                 className="flex items-start justify-between gap-3 rounded-2xl bg-white/10 px-4 py-3 text-sm shadow-glass-sm"
               >
                 <span className="min-w-0 text-xs text-forest-mist/70 sm:text-sm">
