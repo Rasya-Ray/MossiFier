@@ -48,7 +48,7 @@ export function StatCard({
     <motion.article
       variants={itemVariants}
       whileHover={{ y: -6, scale: 1.01 }}
-      transition={{ type: "spring", stiffness: 320, damping: 22 }}
+      transition={{ type: "tween", duration: 0.18, ease: "easeOut" }}
       className={`flex flex-col rounded-3xl border p-4 shadow-glass backdrop-blur-xl sm:p-5 ${style.card}`}
     >
       <div className="flex items-start justify-between gap-3">

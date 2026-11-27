@@ -164,7 +164,9 @@ export function TrendChart({
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{
                     delay: 0.9 + 0.2 * seriesIndex,
-                    type: "spring",
+                    type: "tween",
+                    duration: 0.3,
+                    ease: "easeOut",
                   }}
                 />
               );

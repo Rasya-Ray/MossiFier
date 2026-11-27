@@ -13,37 +13,72 @@ const TILE_ASPECT = 1920 / 1080;
  * Gambar: public/forest.svg (hutan pinus berkabut), digeser tanpa henti ke
  * samping dengan kecepatan konstan 5 px/detik (parallax horizontal).
  * Gambar diulang ke samping, jadi tidak pernah terlihat ujungnya.
+ *
+ * Animasi memakai `transform` (dikerjakan GPU) lewat Web Animations API,
+ * bukan menulis `background-position` tiap frame. Hasil visual sama, tetapi
+ * tidak ada repaint layar penuh dan tidak ada JavaScript per frame.
  */
 export function ForestBackground() {
-  const tileRef = useRef<HTMLDivElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = tileRef.current;
+    const el = stripRef.current;
     if (!el) return;
 
     // Hormati preferensi pengguna yang mematikan animasi.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    let frame = 0;
-    let last = performance.now();
-    let offset = 0;
+    let animation: Animation | null = null;
+    let tileWidth = 0;
+    let resizeTimer = 0;
 
-    const step = (now: number) => {
-      // Batasi delta supaya tidak melompat saat tab kembali aktif.
-      const delta = Math.min(now - last, 100) / 1000;
-      last = now;
+    /** Mulai ulang animasi, opsional melanjutkan dari fase tertentu (0–1). */
+    const start = (fromPhase = 0) => {
+      animation?.cancel();
 
-      const tileWidth = el.clientHeight * TILE_ASPECT;
-      if (tileWidth > 0) {
-        offset = (offset + SPEED_PX_PER_SECOND * delta) % tileWidth;
-        el.style.backgroundPositionX = `${-offset}px`;
-      }
+      // Tinggi elemen = tinggi viewport (fixed inset-0), jadi lebar satu ubin
+      // yang menutup penuh secara vertikal adalah tinggi × rasio gambar.
+      const next = el.getBoundingClientRect().height * TILE_ASPECT;
+      if (!(next > 0)) return;
 
-      frame = window.requestAnimationFrame(step);
+      tileWidth = next;
+      // Lebih lebar satu ubin dari layar supaya saat digeser tidak ada celah.
+      el.style.width = `calc(100% + ${tileWidth}px)`;
+
+      const duration = (tileWidth / SPEED_PX_PER_SECOND) * 1000;
+      animation = el.animate(
+        [
+          { transform: "translate3d(0, 0, 0)" },
+          { transform: `translate3d(${-tileWidth}px, 0, 0)` },
+        ],
+        { duration, iterations: Infinity, easing: "linear" },
+      );
+
+      if (fromPhase > 0) animation.currentTime = fromPhase * duration;
     };
 
-    frame = window.requestAnimationFrame(step);
-    return () => window.cancelAnimationFrame(frame);
+    start();
+
+    // Ukuran ubin bergantung tinggi layar. Hitung ulang hanya kalau berubah,
+    // dan lanjutkan dari fase yang sama agar tidak melompat.
+    const onResize = () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        const height = el.getBoundingClientRect().height;
+        if (Math.abs(height * TILE_ASPECT - tileWidth) <= 1) return;
+        const progress = animation?.effect?.getComputedTiming().progress;
+        start(typeof progress === "number" ? progress : 0);
+      }, 200);
+    };
+
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.clearTimeout(resizeTimer);
+      animation?.cancel();
+      el.style.width = "";
+    };
   }, []);
 
   return (
@@ -52,8 +87,8 @@ export function ForestBackground() {
       className="pointer-events-none fixed inset-0 -z-20 overflow-hidden bg-forest-night"
     >
       <div
-        ref={tileRef}
-        className="absolute inset-0"
+        ref={stripRef}
+        className="absolute inset-y-0 left-0 w-full will-change-transform"
         style={{
           backgroundImage: "url(/forest.svg)",
           backgroundRepeat: "repeat-x",
