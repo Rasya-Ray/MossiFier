@@ -92,6 +92,41 @@ export function readingValue(
   return reading[key];
 }
 
+/** Ambil nilai numerik yang valid (null untuk boolean/teks/kosong). */
+export function readingNumber(
+  reading: PublicSensorReading | SensorReading | null | undefined,
+  key: SensorKey,
+): number | null {
+  const value = readingValue(reading, key);
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Selisih pembacaan terbaru vs pembacaan valid sebelumnya.
+ * `readings` harus urut lama → baru (format `useRealtimeSensors`).
+ * Null kalau belum ada dua angka untuk dibandingkan.
+ */
+export function sensorTrend(
+  readings: Array<PublicSensorReading | SensorReading>,
+  key: SensorKey,
+): number | null {
+  const values: number[] = [];
+  for (let i = readings.length - 1; i >= 0 && values.length < 2; i -= 1) {
+    const value = readingNumber(readings[i], key);
+    if (value !== null) values.push(value);
+  }
+  if (values.length < 2) return null;
+  return values[0] - values[1];
+}
+
+/** Teks tren siap tampil, mis. "▲ 2,1 dari pembacaan sebelumnya". */
+export function formatSensorTrend(delta: number | null | undefined): string | null {
+  if (typeof delta !== "number" || !Number.isFinite(delta)) return null;
+  if (Math.abs(delta) < 0.05) return "Sama dengan pembacaan sebelumnya";
+  const arrow = delta > 0 ? "▲" : "▼";
+  return `${arrow} ${numberFormatter.format(Math.abs(delta))} dari pembacaan sebelumnya`;
+}
+
 /** Ambil nilai numerik untuk grafik (boolean → 0/1). */
 export function historyValues(
   readings: Array<PublicSensorReading | SensorReading>,

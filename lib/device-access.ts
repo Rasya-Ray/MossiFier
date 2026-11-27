@@ -2,7 +2,7 @@
  * Akses device (server-only).
  *
  * Skema baru: tabel `devices` murni data sensor per kiriman ESP32,
- * tanpa FK/owner/nama/klaim. Validasi cukup memastikan `device_id`
+ * tanpa FK/owner/nama/klaim. Validasi memastikan `device_id`
  * (format MOSS-…) sudah terdaftar di tabel — kalau belum ada baris,
  * ID dianggap invalid (belum pernah kirim data).
  */

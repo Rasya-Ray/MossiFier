@@ -2,8 +2,11 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import type { CardTone } from "@/lib/air-quality";
+import { formatSensorTrend } from "@/lib/sensors";
+import type { SensorScale } from "@/lib/scales";
 import { AIR_TONE_STYLE } from "./air-tone";
 import { itemVariants } from "./motion-variants";
+import { ScaleBar } from "./scale-bar";
 
 type StatCardProps = {
   label: string;
@@ -13,8 +16,16 @@ type StatCardProps = {
   tone?: CardTone;
   /** Label status singkat, mis. "Baik", "Ideal", "Sehat". */
   badge?: string;
-  /** Keterangan tambahan, mis. rentang kategori. */
+  /** Keterangan tambahan, mis. pembanding WHO. */
   advice?: string;
+  /** Skala zona + acuan. Kalau ada, kartu menampilkan bar dan sumber. */
+  scale?: SensorScale | null;
+  /** Nilai mentah untuk posisi penanda di bar. */
+  rawValue?: number | null;
+  /** Selisih vs pembacaan sebelumnya (opsional). */
+  trend?: number | null;
+  /** Sumber manual untuk kartu tanpa skala (mis. status perangkat). */
+  source?: string;
 };
 
 export function StatCard({
@@ -24,15 +35,21 @@ export function StatCard({
   tone = "neutral",
   badge,
   advice,
+  scale,
+  rawValue,
+  trend,
+  source,
 }: StatCardProps) {
   const style = AIR_TONE_STYLE[tone];
+  const trendText = formatSensorTrend(trend);
+  const sourceText = scale?.source ?? source;
 
   return (
     <motion.article
       variants={itemVariants}
       whileHover={{ y: -6, scale: 1.01 }}
       transition={{ type: "spring", stiffness: 320, damping: 22 }}
-      className={`rounded-3xl border p-4 shadow-glass backdrop-blur-xl sm:p-5 ${style.card}`}
+      className={`flex flex-col rounded-3xl border p-4 shadow-glass backdrop-blur-xl sm:p-5 ${style.card}`}
     >
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs font-medium tracking-wide text-forest-mist/70 uppercase">
@@ -67,9 +84,27 @@ export function StatCard({
         </motion.p>
       </AnimatePresence>
 
-      <p className="mt-1 text-xs leading-5 text-forest-mist/60">{hint}</p>
+      {scale && (
+        <ScaleBar scale={scale} value={rawValue} className="mt-0.5" />
+      )}
+
+      <p className="mt-2 text-xs leading-5 text-forest-mist/60">{hint}</p>
       {advice && (
         <p className="mt-1 text-[11px] leading-4 text-forest-mist/50">{advice}</p>
+      )}
+
+      {(sourceText || trendText) && (
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-white/10 pt-2.5 text-[10px] leading-4 text-forest-mist/45">
+          <span className="min-w-0">{sourceText}</span>
+          {trendText && (
+            <span
+              className="shrink-0 font-medium text-forest-mist/60"
+              title="Dibandingkan dengan pembacaan sebelumnya"
+            >
+              {trendText}
+            </span>
+          )}
+        </div>
       )}
     </motion.article>
   );

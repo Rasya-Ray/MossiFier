@@ -2,20 +2,22 @@
 
 import { motion } from "motion/react";
 import { formatDateTime } from "@/lib/format";
-import { formatSensorValue } from "@/lib/sensors";
 import {
-  AIR_GUIDE,
-  AIR_SOURCE_NOTE,
+  formatSensorValue,
+  readingNumber,
+  sensorTrend,
+} from "@/lib/sensors";
+import {
   CO2_GUIDANCE,
-  PM1_NOTE,
-  airRange,
   co2Category,
   overallAirQuality,
   pm1Category,
   pm10Category,
   pm25Category,
 } from "@/lib/air-quality";
+import { sensorScale } from "@/lib/scales";
 import { AIR_TONE_STYLE } from "@/components/dashboard/air-tone";
+import { AirReference } from "@/components/dashboard/air-reference";
 import { ClockIcon } from "@/components/dashboard/icons";
 import { containerVariants, itemVariants } from "@/components/dashboard/motion-variants";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
@@ -67,8 +69,8 @@ export function AirQualityView() {
             Kualitas Udara
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-6 text-forest-mist/70">
-            Debu halus dan gas di sekitar perangkat. Setiap angka punya warna
-            status: hijau berarti aman, makin gelap berarti makin perlu
+            Debu halus dan gas di sekitar perangkat. Setiap kartu punya warna
+            status: hijau berarti aman, makin putih/terang berarti makin perlu
             perhatian.
           </p>
         </div>
@@ -114,11 +116,10 @@ export function AirQualityView() {
           badge={co2In?.label}
           tone={co2In?.level}
           hint={co2In ? CO2_GUIDANCE[co2In.level].short : "Menunggu data"}
-          advice={
-            co2In
-              ? `Rentang kategori: ${airRange("co2", co2In.level)}`
-              : "Dibaca dari sensor gas MQ-135"
-          }
+          advice="Bukan parameter ISPU — acuan ruangan"
+          scale={sensorScale("co2_in")}
+          rawValue={readingNumber(latest, "co2_in")}
+          trend={sensorTrend(live.readings, "co2_in")}
         />
         <StatCard
           label="CO₂ Out"
@@ -126,11 +127,10 @@ export function AirQualityView() {
           badge={co2Out?.label}
           tone={co2Out?.level}
           hint={co2Out ? CO2_GUIDANCE[co2Out.level].short : "Menunggu data"}
-          advice={
-            co2Out
-              ? `Rentang kategori: ${airRange("co2", co2Out.level)}`
-              : "Dibaca dari sensor gas MQ-135"
-          }
+          advice="Bukan parameter ISPU — acuan ruangan"
+          scale={sensorScale("co2_out")}
+          rawValue={readingNumber(latest, "co2_out")}
+          trend={sensorTrend(live.readings, "co2_out")}
         />
         <StatCard
           label="PM1.0"
@@ -138,11 +138,10 @@ export function AirQualityView() {
           badge={pm1?.label}
           tone={pm1?.level}
           hint={pm1 ? pm1.short : "Menunggu data"}
-          advice={
-            pm1
-              ? `Rentang (acuan PM2.5): ${airRange("pm25", pm1.level)}`
-              : "Debu sangat halus < 1 μm"
-          }
+          advice="Belum ada baku mutu resmi"
+          scale={sensorScale("pm1")}
+          rawValue={readingNumber(latest, "pm1")}
+          trend={sensorTrend(live.readings, "pm1")}
         />
         <StatCard
           label="PM2.5"
@@ -150,11 +149,10 @@ export function AirQualityView() {
           badge={pm25?.label}
           tone={pm25?.level}
           hint={pm25 ? pm25.short : "Menunggu data"}
-          advice={
-            pm25
-              ? `Rentang kategori: ${airRange("pm25", pm25.level)}`
-              : "Debu halus < 2.5 μm"
-          }
+          advice="WHO 2021: ≤ 15 µg/m³ (24 jam)"
+          scale={sensorScale("pm25")}
+          rawValue={readingNumber(latest, "pm25")}
+          trend={sensorTrend(live.readings, "pm25")}
         />
         <StatCard
           label="PM10"
@@ -162,11 +160,10 @@ export function AirQualityView() {
           badge={pm10?.label}
           tone={pm10?.level}
           hint={pm10 ? pm10.short : "Menunggu data"}
-          advice={
-            pm10
-              ? `Rentang kategori: ${airRange("pm10", pm10.level)}`
-              : "Debu < 10 μm"
-          }
+          advice="WHO 2021: ≤ 45 µg/m³ (24 jam)"
+          scale={sensorScale("pm10")}
+          rawValue={readingNumber(latest, "pm10")}
+          trend={sensorTrend(live.readings, "pm10")}
         />
       </div>
 
@@ -201,58 +198,7 @@ export function AirQualityView() {
         />
       </div>
 
-      <motion.section
-        variants={itemVariants}
-        className="mt-5 rounded-3xl border border-white/20 bg-white/10 p-5 shadow-glass backdrop-blur-xl sm:p-6"
-      >
-        <p className="text-xs font-medium tracking-wide text-forest-mist/70 uppercase">
-          Panduan singkat
-        </p>
-        <h2 className="mt-1 text-base font-semibold text-forest-mist sm:text-lg">
-          Angka ini masuk kategori apa?
-        </h2>
-
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[34rem] border-collapse text-left text-sm">
-            <thead>
-              <tr className="text-[11px] font-medium tracking-wide text-forest-mist/60 uppercase">
-                <th className="pb-2 pr-4 font-medium">Status</th>
-                <th className="pb-2 pr-4 font-medium">PM2.5 (µg/m³)</th>
-                <th className="pb-2 pr-4 font-medium">PM10 (µg/m³)</th>
-                <th className="pb-2 font-medium">CO₂ (ppm)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {AIR_GUIDE.map((row) => {
-                const style = AIR_TONE_STYLE[row.level];
-                return (
-                  <tr key={row.level} className="border-t border-white/10">
-                    <td className="py-2.5 pr-4">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${style.badge}`}
-                      >
-                        {row.label}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-4 text-forest-mist/80">{row.pm25}</td>
-                    <td className="py-2.5 pr-4 text-forest-mist/80">{row.pm10}</td>
-                    <td className="py-2.5 text-forest-mist/80">{row.co2}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-4 space-y-1.5 text-[11px] leading-5 text-forest-mist/50">
-          <p>{PM1_NOTE}</p>
-          <p>
-            Nilai CO₂ berasal dari sensor gas MQ-135, jadi bisa berbeda dengan
-            alat ukur CO₂ yang terkalibrasi.
-          </p>
-          <p>{AIR_SOURCE_NOTE}</p>
-        </div>
-      </motion.section>
+      <AirReference />
 
       <motion.div
         variants={itemVariants}

@@ -64,7 +64,7 @@ export function LiveStatus({
           {error ? "OFFLINE" : isStale ? "DATA TERAKHIR" : "LIVE"}
         </span>
         <span className="text-forest-mist/50">
-          · {isStale ? "perangkat mungkin offline" : "otomatis"}
+          · {isStale ? "perangkat sedang offline" : "otomatis"}
         </span>
         <span className="text-forest-mist/50">· cek {checkedAt}</span>
 

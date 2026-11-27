@@ -5,13 +5,19 @@ import { formatDateTime } from "@/lib/format";
 import {
   SENSOR_DESCRIPTIONS,
   SENSOR_LABELS,
+  formatSensorTrend,
   formatSensorValue,
   historyValues,
+  readingNumber,
   readingValue,
+  sensorTrend,
   type SensorKey,
 } from "@/lib/sensors";
 import { sensorStatus } from "@/lib/insights";
+import { sensorScale } from "@/lib/scales";
 import { AIR_TONE_STYLE } from "@/components/dashboard/air-tone";
+import { ScaleBar } from "@/components/dashboard/scale-bar";
+import { SensorReference } from "@/components/dashboard/sensor-reference";
 import { ClockIcon } from "@/components/dashboard/icons";
 import { containerVariants, itemVariants } from "@/components/dashboard/motion-variants";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
@@ -40,6 +46,9 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
   const isStatus = sensorKey === "status";
   const status = sensorStatus(sensorKey, latest);
   const toneStyle = AIR_TONE_STYLE[status.tone];
+  const scale = sensorScale(sensorKey);
+  const numeric = readingNumber(live.latest, sensorKey);
+  const trend = formatSensorTrend(sensorTrend(live.readings, sensorKey));
 
   const readings = [...live.readings].reverse().slice(0, 6);
 
@@ -105,6 +114,10 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
             </span>
             <span className="text-xs text-forest-mist/60">{status.hint}</span>
           </div>
+          {scale && <ScaleBar scale={scale} value={numeric} />}
+          {trend && (
+            <p className="mt-1 text-[10px] text-forest-mist/45">{trend}</p>
+          )}
           <div className="mt-auto pt-8">
             <div className="flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-xs text-forest-mist/80 shadow-glass-inset">
               <ClockIcon className="h-4 w-4 shrink-0 text-forest-lime" />
@@ -127,6 +140,8 @@ export function FieldView({ sensorKey, subtitle }: FieldViewProps) {
           />
         )}
       </div>
+
+      <SensorReference sensorKey={sensorKey} />
 
       {/* Riwayat */}
       <motion.section

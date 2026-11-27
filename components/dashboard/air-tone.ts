@@ -26,12 +26,12 @@ export const AIR_TONE_STYLE: Record<
   unhealthy: {
     card: "border-forest-mist/30 bg-forest-pine/40",
     badge: "border border-forest-mist/40 bg-forest-pine/70 text-forest-mist",
-    bar: "bg-forest-mist/70",
+    bar: "bg-forest-mist/45",
   },
   veryUnhealthy: {
     card: "border-forest-mist/50 bg-forest-night/40",
     badge: "border border-forest-mist/50 bg-forest-night/80 text-forest-mist",
-    bar: "bg-forest-mist",
+    bar: "bg-forest-mist/70",
   },
   hazardous: {
     card: "border-forest-mist/70 bg-forest-pine/60",

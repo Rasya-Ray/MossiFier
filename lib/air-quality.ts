@@ -112,7 +112,7 @@ const SEVERITY: Record<AirLevel, number> = {
 
 type Band = { max: number; level: AirLevel };
 
-const PM25_BANDS: Band[] = [
+export const PM25_BANDS: Band[] = [
   { max: 15, level: "good" },
   { max: 65, level: "moderate" },
   { max: 150, level: "unhealthy" },
@@ -120,7 +120,7 @@ const PM25_BANDS: Band[] = [
   { max: Number.POSITIVE_INFINITY, level: "hazardous" },
 ];
 
-const PM10_BANDS: Band[] = [
+export const PM10_BANDS: Band[] = [
   { max: 50, level: "good" },
   { max: 150, level: "moderate" },
   { max: 350, level: "unhealthy" },
@@ -128,7 +128,7 @@ const PM10_BANDS: Band[] = [
   { max: Number.POSITIVE_INFINITY, level: "hazardous" },
 ];
 
-const CO2_BANDS: Band[] = [
+export const CO2_BANDS: Band[] = [
   { max: 800, level: "good" },
   { max: 1000, level: "moderate" },
   { max: 1500, level: "unhealthy" },
@@ -166,7 +166,24 @@ export const PM1_NOTE =
   "PM1.0 belum punya baku mutu resmi. Kategorinya memakai ambang PM2.5 sebagai acuan pendukung.";
 
 export const AIR_SOURCE_NOTE =
-  "Acuan: ISPU (Permen LHK No. 14/2020) dan BMKG untuk PM2.5/PM10; ASHRAE/EPA untuk CO₂ dalam ruangan.";
+  "Acuan kategori: BMKG / Perban No. 2/2022 untuk PM2.5, ISPU (Permen LHK No. 14/2020) untuk PM10, dan acuan umum ventilasi ruangan (ASHRAE/EPA) untuk CO₂. WHO 2021 hanya pembanding kesehatan, bukan kategori warna.";
+
+/**
+ * Nilai panduan WHO 2021 (Global Air Quality Guidelines) untuk partikulat.
+ * Ini batas kesehatan jangka pendek, bukan kategori ISPU — jangan dicampur.
+ */
+export const WHO_GUIDE = [
+  { label: "PM2.5", limit: "≤ 15 µg/m³", period: "rata-rata 24 jam" },
+  { label: "PM10", limit: "≤ 45 µg/m³", period: "rata-rata 24 jam" },
+] as const;
+
+export const WHO_NOTE =
+  "WHO 2021 memberi batas kesehatan, bukan kategori warna ISPU. Angka WHO dipakai sebagai pembanding; kategori di aplikasi tetap memakai ambang BMKG/ISPU.";
+
+/** Label kategori berdasarkan level (untuk legenda/skala). */
+export function airLevelLabel(level: AirLevel): string {
+  return AIR_GUIDE.find((row) => row.level === level)?.label ?? level;
+}
 
 export type AirMetric = "pm25" | "pm10" | "co2";
 

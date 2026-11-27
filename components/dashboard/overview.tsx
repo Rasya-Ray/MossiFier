@@ -13,9 +13,11 @@ import {
   tipOfTheDay,
   type InsightTone,
 } from "@/lib/insights";
-import { SENSOR_LABELS, formatSensorValue, type SensorKey } from "@/lib/sensors";
-import { overallAirQuality } from "@/lib/air-quality";
+import { SENSOR_LABELS, formatSensorValue, readingNumber, sensorTrend, type SensorKey } from "@/lib/sensors";
+import { AIR_GUIDE, overallAirQuality } from "@/lib/air-quality";
+import { sensorScale } from "@/lib/scales";
 import { AIR_TONE_STYLE } from "@/components/dashboard/air-tone";
+import { InfoBoard } from "@/components/dashboard/info-board";
 import { ArrowRightIcon, ClockIcon, SignalIcon, SproutIcon } from "@/components/dashboard/icons";
 import { containerVariants, itemVariants } from "@/components/dashboard/motion-variants";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
@@ -58,6 +60,22 @@ const OVERVIEW_KEYS: SensorKey[] = [
   "fan_speed",
   "pump",
   "status",
+];
+
+/** Tiga langkah singkat membaca kartu sensor. */
+const READ_STEPS = [
+  {
+    title: "Lihat labelnya",
+    text: "Baik, Sedang, atau Tidak Sehat — kesimpulan cepat dari angkanya.",
+  },
+  {
+    title: "Cek bar warna",
+    text: "Penanda putih menunjukkan posisi angka. Makin ke kanan, makin perlu perhatian.",
+  },
+  {
+    title: "Baca saran",
+    text: "Di bawah angka ada saran singkat yang bisa langsung dilakukan.",
+  },
 ];
 
 export function Overview() {
@@ -191,11 +209,66 @@ export function Overview() {
                 hint={status.hint}
                 tone={status.tone}
                 badge={status.badge}
+                scale={sensorScale(key)}
+                rawValue={readingNumber(latest, key)}
+                trend={sensorTrend(live.readings, key)}
               />
             );
           })}
         </div>
       </motion.section>
+
+      <InfoBoard
+        className="mt-8"
+        title="Cara membaca angka di halaman ini"
+        intro="Setiap kartu punya label status dan bar warna. Penanda putih menunjukkan posisi angka sekarang."
+        sources={["BMKG", "ISPU", "ASHRAE/EPA"]}
+        notes={[
+          "Status udara = kategori terburuk dari CO₂, PM1.0, PM2.5, dan PM10.",
+          "PM1.0 belum punya baku mutu resmi; kategorinya memakai ambang PM2.5.",
+          "CO₂ memakai acuan ruangan ASHRAE/EPA, bukan ISPU. Nilai MQ-135 bisa berbeda dari alat terkalibrasi.",
+        ]}
+      >
+        <div className="grid gap-3 sm:grid-cols-3">
+          {READ_STEPS.map((step, index) => (
+            <div
+              key={step.title}
+              className="rounded-2xl bg-white/5 p-3.5 shadow-glass-inset"
+            >
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-forest-lime text-[11px] font-bold text-forest-night">
+                {index + 1}
+              </span>
+              <h3 className="mt-2 text-sm font-semibold text-forest-mist">
+                {step.title}
+              </h3>
+              <p className="mt-1 text-xs leading-5 text-forest-mist/60">
+                {step.text}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium text-forest-mist/55">
+            Kategori udara:
+          </span>
+          {AIR_GUIDE.map((row) => (
+            <span
+              key={row.level}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${AIR_TONE_STYLE[row.level].badge}`}
+            >
+              {row.label}
+            </span>
+          ))}
+        </div>
+
+        <Link
+          href="/dashboard/air-quality"
+          className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-forest-mist underline decoration-forest-lime decoration-2 underline-offset-2"
+        >
+          Lihat panduan lengkap <ArrowRightIcon className="h-3.5 w-3.5" />
+        </Link>
+      </InfoBoard>
 
       {insights.length > 0 && (
         <motion.section variants={itemVariants} className="mt-8">

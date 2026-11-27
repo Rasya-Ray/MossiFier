@@ -13,7 +13,7 @@ import { getAdminClient } from "@/lib/supabase-admin";
 
 /** Jumlah baris terakhir yang diringkas untuk chatbot. */
 const CONTEXT_ROWS = 20;
-/** Lewat dari ini, data dianggap terlambat (perangkat mungkin offline). */
+/** Lewat dari ini, data dianggap terlambat (perangkat sedang offline). */
 const STALE_AFTER_MS = 10 * 60 * 1000;
 
 const dateTime = new Intl.DateTimeFormat("id-ID", {
@@ -140,7 +140,7 @@ export async function buildSensorContext(
     );
     if (now - at > STALE_AFTER_MS) {
       lines.push(
-        "PERINGATAN: data ini sudah lama, perangkat mungkin offline. Jangan sebut sebagai kondisi saat ini tanpa menyebut ini.",
+        "PERINGATAN: data ini sudah lama, perangkat sedang offline. Jangan sebut sebagai kondisi saat ini tanpa menyebut ini.",
       );
     }
   }
